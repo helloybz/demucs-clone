@@ -1,5 +1,7 @@
 from pathlib import Path
+
 import unittest
+import torch
 
 from musicsplitter.datasets import MUSDB18
 
@@ -16,6 +18,12 @@ class TestMUSDB18(unittest.TestCase):
             chunk_duration_in_sec=10,
             sample_rate=22050,
         )
+
+    def test_is_torch_tensor(self):
+        data = self.mus_train[0]
+
+        for data_ in data:
+            assert isinstance(data_, torch.Tensor)
 
     def test_length(self):
         assert len(self.mus_train) == 1

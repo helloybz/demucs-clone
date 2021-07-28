@@ -36,6 +36,12 @@ class MUSDB18(torch.utils.data.Dataset):
         bass = track.targets['bass'].audio.T
         other = track.targets['other'].audio.T
 
+        audio = torch.from_numpy(audio)
+        vocal = torch.from_numpy(vocal)
+        drum = torch.from_numpy(drum)
+        bass = torch.from_numpy(bass)
+        other = torch.from_numpy(other)
+
         return audio, vocal, drum, bass, other
 
     def __len__(self):
