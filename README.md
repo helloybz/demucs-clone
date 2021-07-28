@@ -1,7 +1,9 @@
-# Music Splitter
+# Implementation for Practice: Demucs
 
-주어진 음악을 각 세션별로 분리하는 뉴럴 네트워크 기반 모델입니다.
-세션은 보컬, 드럼, 베이스, 기타로 구성됩니다.
+- My own implementation of Demucs in PyTorch.
+- Without referencing the original source code.
+- Original paper [[Link]](https://arxiv.org/pdf/1911.13254.pdf)
+- Github [[Link]](https://github.com/facebookresearch/demucs)
 
 ## Dataset
 
