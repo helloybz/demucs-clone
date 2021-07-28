@@ -15,4 +15,4 @@ class TestDemucs(unittest.TestCase):
         with torch.no_grad():
             output = self.model(audio)
 
-        assert output.shape == (B, 2048, 9)
+        assert output.shape == (B, 9, 2048)

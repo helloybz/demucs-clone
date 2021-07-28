@@ -37,10 +37,24 @@ class Demucs(nn.Module):
                 ),
             ]
         )
+        self.encoder_bilstm = nn.LSTM(
+            input_size=2048,
+            hidden_size=2048,
+            num_layers=2,
+            bidirectional=True,
+            batch_first=True,
+        )
+        self.encoder_linear = nn.Linear(
+            in_features=4096,
+            out_features=2048,
+        )
 
     def forward(self, x):
         for encoder_conv_block in self.encoder_conv_blocks:
             x = encoder_conv_block(x)
+        x = x.transpose(-1, -2)  # C becomes d, and (B, d, T) to (B, T, d)
+        x, _ = self.encoder_bilstm(x)
+        x = self.encoder_linear(x)
         return x
 
 
