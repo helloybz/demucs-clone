@@ -49,6 +49,35 @@ class Demucs(nn.Module):
             out_features=2048,
         )
 
+        self.decoder_conv_blocks = nn.ModuleList(
+            [
+                DemucsDecoderBlock(
+                    in_channels=2048,
+                    out_channels=1024,
+                ),
+                DemucsDecoderBlock(
+                    in_channels=1024,
+                    out_channels=512,
+                ),
+                DemucsDecoderBlock(
+                    in_channels=512,
+                    out_channels=256,
+                ),
+                DemucsDecoderBlock(
+                    in_channels=256,
+                    out_channels=128,
+                ),
+                DemucsDecoderBlock(
+                    in_channels=128,
+                    out_channels=64,
+                ),
+                DemucsDecoderBlock(
+                    in_channels=64,
+                    out_channels=8,  # 2 channels for each 4 instruments.
+                ),
+            ]
+        )
+
     def forward(self, x):
         for encoder_conv_block in self.encoder_conv_blocks:
             x = encoder_conv_block(x)
@@ -76,6 +105,30 @@ class DemucsEncoderBlock(nn.Module):
                 stride=1,
             ),
             nn.GLU(dim=-2),  # halves along C.
+        )
+
+    def forward(self, x):
+        return self.block(x)
+
+
+class DemucsDecoderBlock(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(DemucsDecoderBlock, self).__init__()
+        self.block = nn.Sequential(
+            nn.Conv1d(  # supposed to decrease T. Figure2b in the paper.
+                in_channels=in_channels,
+                out_channels=2*in_channels,
+                kernel_size=3,
+                stride=1,
+            ),
+            nn.GLU(dim=-2),  # halves along C.
+            nn.ConvTranspose1d(
+                in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=8,
+                stride=4,
+            ),
+            nn.ReLU(),
         )
 
     def forward(self, x):
