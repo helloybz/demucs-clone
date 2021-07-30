@@ -79,12 +79,30 @@ class Demucs(nn.Module):
         )
 
     def forward(self, x):
+        encoder_outputs = []
         for encoder_conv_block in self.encoder_conv_blocks:
             x = encoder_conv_block(x)
+            encoder_outputs.append(x)
+        encoder_outputs.reverse()
+
         x = x.transpose(-1, -2)  # C becomes d, and (B, d, T) to (B, T, d)
         x, _ = self.encoder_bilstm(x)
         x = self.encoder_linear(x)
+        x = x.transpose(-1, -2)
+
+        for encoder_output, decoder_conv_block in zip(encoder_outputs, self.decoder_conv_blocks):
+            encoder_output = self._trim_edge(encoder_output=encoder_output, decoder_input=x)
+            x = encoder_output.add(x)
+            x = decoder_conv_block(x)
+
         return x
+
+    def _trim_edge(self, encoder_output, decoder_input):
+        diff = encoder_output.shape[-1] - decoder_input.shape[-1]
+        assert diff >= 0
+        encoder_output = encoder_output[..., diff//2:encoder_output.shape[-1]-(diff-diff//2)]
+
+        return encoder_output
 
 
 class DemucsEncoderBlock(nn.Module):

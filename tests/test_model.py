@@ -15,4 +15,8 @@ class TestDemucs(unittest.TestCase):
         with torch.no_grad():
             output = self.model(audio)
 
-        assert output.shape == (B, 9, 2048)
+        assert output.shape == (B, 2*4, 31404)
+
+    def test_model_grad(self):
+        # Search how to test this.
+        pass
