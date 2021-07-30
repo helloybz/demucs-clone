@@ -78,6 +78,9 @@ class Demucs(nn.Module):
             ]
         )
 
+        # Remove the activation function from the last decoder block.
+        self.decoder_conv_blocks[-1].block = self.decoder_conv_blocks[-1].block[:-1]
+
     def forward(self, x):
         encoder_outputs = []
         for encoder_conv_block in self.encoder_conv_blocks:
