@@ -1,5 +1,7 @@
 import torch.nn as nn
 
+from .utils import init_conv_weight_with_rescaling
+
 
 class Demucs(nn.Module):
     """
@@ -80,6 +82,8 @@ class Demucs(nn.Module):
 
         # Remove the activation function from the last decoder block.
         self.decoder_conv_blocks[-1].block = self.decoder_conv_blocks[-1].block[:-1]
+
+        self.apply(init_conv_weight_with_rescaling)
 
     def forward(self, x):
         encoder_outputs = []

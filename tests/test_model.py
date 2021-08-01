@@ -20,3 +20,7 @@ class TestDemucs(unittest.TestCase):
     def test_model_grad(self):
         # Search how to test this.
         pass
+
+    def test_model_weight_init(self):
+        # TODO Write test code:
+        pass
