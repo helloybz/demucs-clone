@@ -34,5 +34,5 @@ class TestDemucs(unittest.TestCase):
         pass
 
     def test_model_weight_init(self):
-        # TODO Write test code:
-        pass
+        parameter_ = next(self.model.parameters())
+        assert parameter_.dtype == torch.float32

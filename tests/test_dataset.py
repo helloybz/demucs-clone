@@ -52,3 +52,9 @@ class TestMUSDB18(unittest.TestCase):
         assert audio.shape[1] == self.mus_train.chunk_duration * self.mus_train.sample_rate
 
         assert audio.shape == vocal.shape == drum.shape == bass.shape == other.shape
+
+    def test_dtype(self):
+        data = self.mus_train[0]
+
+        for data_ in data:
+            assert data_.dtype == torch.float32
