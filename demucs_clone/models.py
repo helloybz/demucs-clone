@@ -1,7 +1,9 @@
+from typing import Sequence
 import torch.nn as nn
 import torchaudio.functional as F_audio
 
 from .utils import init_conv_weight_with_rescaling
+from .utils import trim_edge
 
 
 class Demucs(nn.Module):
@@ -12,12 +14,13 @@ class Demucs(nn.Module):
 
     def __init__(
         self,
-        sample_rate: int = 44100,
+        sample_rate:    int = 44100,
+        sources:        Sequence[str] = ['drums', 'bass', 'vocals', 'other'],
     ) -> None:
         super(Demucs, self).__init__()
 
         self.sample_rate = sample_rate
-
+        self.sources = sources
         self.encoder_conv_blocks = nn.ModuleList(
             [
                 DemucsEncoderBlock(
@@ -82,7 +85,7 @@ class Demucs(nn.Module):
                 ),
                 DemucsDecoderBlock(
                     in_channels=64,
-                    out_channels=8,  # 2 channels for each 4 instruments.
+                    out_channels=2 * len(self.sources),  # 2 channels for each 4 instruments.
                 ),
             ]
         )
@@ -93,7 +96,7 @@ class Demucs(nn.Module):
         self.apply(init_conv_weight_with_rescaling)
 
     def forward(self, x):
-
+        B, C, T = x.shape
         x = F_audio.resample(
             waveform=x,
             orig_freq=self.sample_rate,
@@ -112,7 +115,7 @@ class Demucs(nn.Module):
         x = x.transpose(-1, -2)
 
         for encoder_output, decoder_conv_block in zip(encoder_outputs, self.decoder_conv_blocks):
-            encoder_output = self._trim_edge(encoder_output=encoder_output, decoder_input=x)
+            encoder_output = trim_edge(input=encoder_output, target=x)
             x = encoder_output.add(x)
             x = decoder_conv_block(x)
 
@@ -121,7 +124,7 @@ class Demucs(nn.Module):
             orig_freq=self.sample_rate*2,
             new_freq=self.sample_rate,
         )
-
+        x = x.reshape(B, len(self.sources), C, -1)
         return x
 
     def _trim_edge(self, encoder_output, decoder_input):

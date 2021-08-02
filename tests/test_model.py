@@ -18,6 +18,7 @@ class TestDemucs(unittest.TestCase):
             data_root=data_root,
             download=False,
             split='train',
+            sources=['drums', 'bass', 'vocals', 'other'],
             chunk_duration=2,
             sample_rate=44100,
         )

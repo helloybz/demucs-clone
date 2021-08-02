@@ -7,3 +7,15 @@ def init_conv_weight_with_rescaling(module):
 
         alpha = module.weight.data.std().div(0.1)
         module.weight.data.div_(alpha.sqrt())
+
+
+def trim_edge(input, target):
+    '''
+        Trim input tensor as same as target tensors' size
+        with aligned on the center of the input.
+    '''
+    diff = input.shape[-1] - target.shape[-1]
+    assert diff >= 0, f'Input should larger or equal than target. {input.shape[-1], target.shape[-1]}'
+    input = input[..., diff//2:input.shape[-1]-(diff-diff//2)]
+
+    return input
