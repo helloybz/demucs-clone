@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torchaudio.functional as F_audio
 
 from .utils import init_conv_weight_with_rescaling
 
@@ -9,8 +10,14 @@ class Demucs(nn.Module):
     Return an isolated instrument in a waveform.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        sample_rate: int = 44100,
+    ) -> None:
         super(Demucs, self).__init__()
+
+        self.sample_rate = sample_rate
+
         self.encoder_conv_blocks = nn.ModuleList(
             [
                 DemucsEncoderBlock(
@@ -86,6 +93,13 @@ class Demucs(nn.Module):
         self.apply(init_conv_weight_with_rescaling)
 
     def forward(self, x):
+
+        x = F_audio.resample(
+            waveform=x,
+            orig_freq=self.sample_rate,
+            new_freq=self.sample_rate*2,
+        )
+
         encoder_outputs = []
         for encoder_conv_block in self.encoder_conv_blocks:
             x = encoder_conv_block(x)
@@ -101,6 +115,12 @@ class Demucs(nn.Module):
             encoder_output = self._trim_edge(encoder_output=encoder_output, decoder_input=x)
             x = encoder_output.add(x)
             x = decoder_conv_block(x)
+
+        x = F_audio.resample(
+            waveform=x,
+            orig_freq=self.sample_rate*2,
+            new_freq=self.sample_rate,
+        )
 
         return x
 
