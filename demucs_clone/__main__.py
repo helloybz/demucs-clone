@@ -2,6 +2,7 @@ import argparse
 import random
 from pathlib import Path
 
+from torch.utils import tensorboard
 import torch
 import numpy
 import yaml
@@ -23,6 +24,12 @@ def train(args):
     )
     data_root = Path(__file__).parent.parent.parent.joinpath("datasets").joinpath('musdb18')
     assert data_root.exists()
+
+    tb_logdir = Path(__file__).parent.parent.joinpath(f'{config_file.stem}').joinpath('logdir')
+
+    tb = tensorboard.SummaryWriter(
+        log_dir=tb_logdir,
+    )
 
     device = torch.device('cuda') if args.gpu else torch.device('cpu')
 
@@ -81,6 +88,7 @@ def train(args):
             loss_train_epoch += loss_train_batch
             batch_size += 1
 
+        tb.add_scalar(tag='train', scalar_value=loss_train_epoch/batch_size, global_step=epoch)
         print(f'train_epoch {loss_train_epoch/batch_size}')
 
         if epoch & validator.validation_period == 0:
@@ -91,11 +99,14 @@ def train(args):
                 loss_valid_epoch += loss_valid_batch
                 batch_size += 1
             loss_valid_average = loss_valid_epoch/batch_size
+            tb.add_scalar(tag='valid', scalar_value=loss_valid_average, global_step=epoch)
             print(f'valid_epoch {loss_valid_average}')
 
             if validator.is_best(loss_valid_average):
                 # save_model
                 pass
+
+        tb.flush()
 
 
 def main():
