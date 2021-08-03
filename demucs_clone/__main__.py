@@ -24,6 +24,8 @@ def train(args):
     data_root = Path(__file__).parent.parent.parent.joinpath("datasets").joinpath('musdb18')
     assert data_root.exists()
 
+    device = torch.device('cuda') if args.gpu else torch.device('cpu')
+
     train_dataset = MUSDB18(
         data_root=data_root,
         split='train',
@@ -40,6 +42,7 @@ def train(args):
     )
 
     model = Demucs(sample_rate=hparams['sample_rate'], sources=hparams['sources'])
+    model.to(device)
 
     optimizer = torch.optim.Adam(
         params=model.parameters(),
@@ -56,6 +59,7 @@ def train(args):
         optimizer=optimizer,
         batch_size=hparams['batch_size'],
         num_workers=hparams['num_workers'],
+        device=device,
     )
     validator = Validator(
         model=model,
@@ -64,6 +68,7 @@ def train(args):
         batch_size=hparams['batch_size'],
         num_workers=hparams['num_workers'],
         validation_period=hparams['validation_period'],
+        device=device,
     )
 
     epoch_start = 0

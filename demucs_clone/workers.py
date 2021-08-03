@@ -14,12 +14,14 @@ class Worker:
         criterion,
         batch_size: int,
         num_workers: int,
+        device,
     ) -> None:
         self.model = model
         self.dataset = dataset
         self.criterion = criterion
         self.batch_size = batch_size
         self.num_workers = num_workers
+        self.device = device
 
     def _init_dataloader(self):
         return DataLoader(
@@ -41,9 +43,10 @@ class Trainer(Worker):
         optimizer,
         batch_size,
         num_workers,
+        device,
     ) -> None:
 
-        super(Trainer, self).__init__(model, dataset, criterion, batch_size, num_workers)
+        super(Trainer, self).__init__(model, dataset, criterion, batch_size, num_workers, device)
 
         self.optimizer = optimizer
 
@@ -55,6 +58,9 @@ class Trainer(Worker):
         dataloader = self._init_dataloader()
 
         for x, y in dataloader:
+            x = x.to(self.device, non_blocking=True)
+            y = y.to(self.device, non_blocking=True)
+
             self.optimizer.zero_grad()
             y_hat = self.model(x)
             cost = self.criterion(input=y, target=y_hat)
@@ -73,8 +79,9 @@ class Validator(Worker):
         batch_size:         int,
         num_workers:        int,
         validation_period:  int,
+        device,
     ) -> None:
-        super(Validator, self).__init__(model, dataset, criterion, batch_size, num_workers)
+        super(Validator, self).__init__(model, dataset, criterion, batch_size, num_workers, device)
 
         self.validation_period = validation_period
         self.loss_best = Inf
@@ -85,6 +92,9 @@ class Validator(Worker):
         dataloader = self._init_dataloader()
 
         for x, y in dataloader:
+            x = x.to(self.device, non_blocking=True)
+            y = y.to(self.device, non_blocking=True)
+
             y_hat = self.model(x)
             cost = self.criterion(input=y, target=y_hat)
 
