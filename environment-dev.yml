@@ -1,0 +1,15 @@
+name: demucs_clone
+channels:
+  - defaults
+dependencies:
+  - autopep8=1.5.7
+  - flake8=3.9.2
+  - pip=21.1.3
+  - python=3.9.5
+  - boto3=1.17.109
+  - pip:
+      - jupyter==1.0.0
+      - musdb==0.4.0
+      - pyyaml==5.4.1
+      - torch==1.9.0
+      - torchaudio==0.9.0
