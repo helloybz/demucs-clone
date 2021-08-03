@@ -9,6 +9,7 @@ import yaml
 from .models import Demucs
 from .datasets import MUSDB18
 from .workers import Trainer
+from .workers import Validator
 from . import loss
 
 
@@ -30,6 +31,13 @@ def train(args):
         sample_rate=hparams['sample_rate'],
         **hparams['dataset']['train'],
     )
+    valid_dataset = MUSDB18(
+        data_root=data_root,
+        split='valid',
+        sources=hparams['sources'],
+        sample_rate=hparams['sample_rate'],
+        **hparams['dataset']['valid'],
+    )
 
     model = Demucs(sample_rate=hparams['sample_rate'], sources=hparams['sources'])
 
@@ -49,18 +57,42 @@ def train(args):
         batch_size=hparams['batch_size'],
         num_workers=hparams['num_workers'],
     )
+    validator = Validator(
+        model=model,
+        dataset=valid_dataset,
+        criterion=criterion,
+        batch_size=hparams['batch_size'],
+        num_workers=hparams['num_workers'],
+        validation_period=hparams['validation_period'],
+    )
 
     epoch_start = 0
     epoch_end = args.epochs
     for epoch in range(epoch_start, epoch_end):
-        loss_epoch = 0
+        loss_train_epoch = 0
         batch_size = 0
-        for loss_batch in trainer.train():
-            print(loss_batch)
-            loss_epoch += loss_batch
+        for loss_train_batch in trainer.train():
+            print(f'train_batch {loss_train_batch}', end='\r')
+            loss_train_epoch += loss_train_batch
             batch_size += 1
 
-        print(loss_epoch/batch_size)
+        print(f'train_epoch {loss_train_epoch/batch_size}')
+
+        if epoch & validator.validation_period == 0:
+            loss_valid_epoch = 0
+            batch_size = 0
+            for loss_valid_batch in validator.validate():
+                print(f'valid_batch {loss_valid_batch}', end='\r')
+                loss_valid_epoch += loss_valid_batch
+                batch_size += 1
+            loss_valid_average = loss_valid_epoch/batch_size
+            print(f'valid_epoch {loss_valid_average}')
+
+            if validator.is_best(loss_valid_average):
+                # save_model
+                pass
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="demucs_clone"
@@ -73,8 +105,8 @@ def main():
     args = parser.parse_args()
     train(args)
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     torch.manual_seed(0)
     torch.cuda.manual_seed(0)
     torch.cuda.manual_seed_all(0)

@@ -20,6 +20,6 @@ class L1LossWithTrimming(torch.nn.modules.loss._Loss):
             reduction
         )
 
-    def forward(self, input, target):
+    def forward(self, input, target) -> torch.Tensor:
         trimmed_input = trim_edge(input, target)
         return F.l1_loss(trimmed_input, target)
