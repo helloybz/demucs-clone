@@ -25,7 +25,10 @@ def train(args):
     data_root = Path(__file__).parent.parent.parent.joinpath("datasets").joinpath('musdb18')
     assert data_root.exists()
 
+    CHECKPOINT_ROOT = Path(__file__).parent.parent.joinpath(f'{config_file.stem}').joinpath('checkpoints')
+    assert CHECKPOINT_ROOT.exists()
     tb_logdir = Path(__file__).parent.parent.joinpath(f'{config_file.stem}').joinpath('logdir')
+    assert tb_logdir.exists()
 
     tb = tensorboard.SummaryWriter(
         log_dir=tb_logdir,
@@ -78,8 +81,8 @@ def train(args):
         device=device,
     )
 
-    epoch_start = 0
-    epoch_end = args.epochs
+    epoch_start = 1
+    epoch_end = args.epochs + 1
     for epoch in range(epoch_start, epoch_end):
         loss_train_epoch = 0
         batch_size = 0
@@ -91,7 +94,7 @@ def train(args):
         tb.add_scalar(tag='train', scalar_value=loss_train_epoch/batch_size, global_step=epoch)
         print(f'train_epoch {loss_train_epoch/batch_size}')
 
-        if epoch & validator.validation_period == 0:
+        if epoch % validator.validation_period == 0:
             loss_valid_epoch = 0
             batch_size = 0
             for loss_valid_batch in validator.validate():
@@ -103,8 +106,16 @@ def train(args):
             print(f'valid_epoch {loss_valid_average}')
 
             if validator.is_best(loss_valid_average):
-                # save_model
-                pass
+                context = trainer.get_context()
+                context['epoch'] = epoch
+                context['hparams'] = hparams
+                torch.save(context, CHECKPOINT_ROOT.joinpath('best'))
+
+        if epoch % args.checkpoint_period == 0:
+            context = trainer.get_context()
+            context['epoch'] = epoch
+            context['hparams'] = hparams
+            torch.save(context, CHECKPOINT_ROOT.joinpath(f'{epoch}'))
 
         tb.flush()
 
@@ -116,6 +127,7 @@ def main():
 
     parser.add_argument("--config_file", type=str)
     parser.add_argument("--epochs", type=int)
+    parser.add_argument("--checkpoint_period", type=int)
     parser.add_argument("--gpu", action='store_true')
 
     args = parser.parse_args()

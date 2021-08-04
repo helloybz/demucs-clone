@@ -1,4 +1,4 @@
-from typing import Iterator, Iterable
+from typing import Dict, Iterator, Iterable
 
 from numpy import Inf
 import torch
@@ -68,6 +68,14 @@ class Trainer(Worker):
             self.optimizer.step()
 
             yield cost.item()
+
+    def get_context(self) -> Dict:
+        context = dict()
+        context = {
+            "model": self.model.state_dict(),
+            "optimizer": self.optimizer.state_dict(),
+        }
+        return context
 
 
 class Validator(Worker):
