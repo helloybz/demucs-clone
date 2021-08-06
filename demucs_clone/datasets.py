@@ -6,6 +6,7 @@ import musdb
 
 
 class MUSDB18(torch.utils.data.Dataset):
+
     def __init__(
         self,
         data_root,
@@ -41,22 +42,35 @@ class MUSDB18(torch.utils.data.Dataset):
         self.sample_rate = sample_rate
         self.sources = sources
 
+        self._segment_map = [int(track.duration) - self.chunk_duration + 1 for track in self.mus]
+
     def __getitem__(self, idx):
-        track = self.mus[idx]
+
+        cursor = 0
+        for i, segment_size in enumerate(self._segment_map):
+            next_cursor_position = cursor + segment_size
+            if next_cursor_position > idx:
+                track_idx = i
+                offset = idx - cursor
+                break
+            else:
+                cursor = next_cursor_position
+
+        track = self.mus[track_idx]
 
         # make random crop
-        track.chunk_duration = self.chunk_duration
-        track.chunk_start = random.uniform(0, track.duration - self.chunk_duration)
+        track.chunk_duration = self.chunk_duration - 1
+        track.chunk_start = offset + random.uniform(0, 1)
 
-        audio = torch.from_numpy(track.audio.T).float()
+        mixture = torch.from_numpy(track.audio.T).float()
 
-        targets = []
+        sources = []
         for source in self.sources:
-            target_source_audio = torch.from_numpy(track.targets[source].audio.T).float()
-            targets.append(target_source_audio)
-        targets = torch.stack(targets)
+            target_source_audio = torch.from_numpy(track.sources[source].audio.T).float()
+            sources.append(target_source_audio)
+        sources = torch.stack(sources)
 
-        return audio, targets
+        return mixture, sources
 
     def __len__(self):
-        return len(self.mus.tracks)
+        return sum(self._segment_map)

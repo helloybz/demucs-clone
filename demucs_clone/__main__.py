@@ -26,9 +26,7 @@ def train(args):
     assert data_root.exists()
 
     CHECKPOINT_ROOT = Path(__file__).parent.parent.joinpath(f'{config_file.stem}').joinpath('checkpoints')
-    assert CHECKPOINT_ROOT.exists()
     tb_logdir = Path(__file__).parent.parent.joinpath(f'{config_file.stem}').joinpath('logdir')
-    assert tb_logdir.exists()
 
     tb = tensorboard.SummaryWriter(
         log_dir=tb_logdir,

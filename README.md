@@ -14,7 +14,7 @@
 - [ ] 
 
 ## TODO
-- [ ] Epoch Definition: 11-second segments with stride of 1sec, random shift between 0~1, finally 10-second semgent.
+- [x] Epoch Definition: 11-second segments with stride of 1sec, random shift between 0~1, finally 10-second semgent.
 - [ ] Data augmentation: pitch shift
 - [ ] Data augmentation: Remixing with the random sources come from the each different tracks.
 - [ ] Data augmentation: Randomly swapping the channels. (Left, Right)
