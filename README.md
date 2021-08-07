@@ -19,7 +19,7 @@
 - [ ] Data augmentation: Remixing with the random sources come from the each different tracks.
 - [ ] Data augmentation: Randomly swapping the channels. (Left, Right)
 - [ ] Data augmentation: Randomly scaling by a factor between 0.25 and 1.25.
-- [ ] Data augmentation: Tempo shift
+- [x] Data augmentation: Tempo shift
 - [ ] Quantization: What is it?? Read the [paper](https://arxiv.org/abs/2104.09987)
 - [ ] DistributedDataParallel
 - [ ] Evaluation: MOS

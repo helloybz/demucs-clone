@@ -81,6 +81,8 @@ class MUSDB18(torch.utils.data.Dataset):
                     # convert cents into semitones by multiplying 100
                     ['pitch', f'{random.randint(-2, 2)*100}'],
                     ['rate', f'{self.sample_rate}'],
+                    ['stretch', f'{random.randint(88, 112)*0.01}'],
+                    ['rate', f'{self.sample_rate}'],
                 ]
 
                 # TODO: replace with torchaudio.functional.pitch_shift
