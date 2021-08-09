@@ -1,4 +1,4 @@
-from typing import Dict, Iterator, Iterable
+from typing import Dict, Iterator, Iterable, Sequence
 
 from numpy import Inf
 import torch
@@ -39,6 +39,7 @@ class Trainer(Worker):
         self,
         model: nn.Module,
         dataset,
+        augmentations:  Sequence[nn.Module],
         criterion,
         optimizer,
         batch_size,
@@ -49,6 +50,8 @@ class Trainer(Worker):
         super(Trainer, self).__init__(model, dataset, criterion, batch_size, num_workers, device)
 
         self.optimizer = optimizer
+        self.augmentations = nn.Sequential(*augmentations)
+        self.augmentations.to(self.device)
 
     def train(self) -> None:
         '''
@@ -60,6 +63,8 @@ class Trainer(Worker):
         for x, y in dataloader:
             x = x.to(self.device, non_blocking=True)
             y = y.to(self.device, non_blocking=True)
+
+            x, y = self.augmentations([x, y])
 
             self.optimizer.zero_grad()
             y_hat = self.model(x)

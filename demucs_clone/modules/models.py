@@ -2,8 +2,8 @@ from typing import Sequence
 import torch.nn as nn
 import torchaudio.functional as F_audio
 
-from .utils import init_conv_weight_with_rescaling
-from .utils import trim_edge
+from ..utils import init_conv_weight_with_rescaling
+from ..utils import trim_edge
 
 
 class Demucs(nn.Module):

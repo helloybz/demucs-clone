@@ -7,7 +7,8 @@ import torch
 import numpy
 import yaml
 
-from .models import Demucs
+from .modules import Demucs
+from .modules.augmentations import ChannelSwapping
 from .datasets import MUSDB18
 from .workers import Trainer
 from .workers import Validator
@@ -53,6 +54,10 @@ def train(args):
     model = Demucs(sample_rate=hparams['sample_rate'], sources=hparams['sources'])
     model.to(device)
 
+    augmentations = [
+        ChannelSwapping(prob=0.5),
+    ]
+
     optimizer = torch.optim.Adam(
         params=model.parameters(),
         **hparams['optimizer'],
@@ -64,6 +69,7 @@ def train(args):
     trainer = Trainer(
         model=model,
         dataset=train_dataset,
+        augmentations=augmentations,
         criterion=criterion,
         optimizer=optimizer,
         batch_size=hparams['batch_size'],
