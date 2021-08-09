@@ -29,3 +29,24 @@ class ChannelSwapping(nn.Module):
                 assert C == 2, f"The number of the channel should be 2, but given is {C}"
                 signals[i] = signal.flip(-2)  # Flip over C-dim.
         return signals
+
+
+class Scaling(nn.Module):
+    def __init__(
+            self,
+            min_scaler,
+            max_scaler,
+    ) -> None:
+        super(Scaling, self).__init__()
+        self.uniform_dist = torch.distributions.Uniform(low=min_scaler, high=max_scaler)
+
+    def forward(
+        self,
+        signals: Sequence[torch.Tensor],
+    ) -> Sequence[torch.Tensor]:
+
+        scaler = self.uniform_dist.sample([1])
+        for i, signal in enumerate(signals):
+            signals[i] = signal*scaler
+
+        return signals

@@ -8,7 +8,7 @@ import numpy
 import yaml
 
 from .modules import Demucs
-from .modules.augmentations import ChannelSwapping
+from .modules.augmentations import ChannelSwapping, Scaling
 from .datasets import MUSDB18
 from .workers import Trainer
 from .workers import Validator
@@ -55,6 +55,7 @@ def train(args):
 
     augmentations = [
         ChannelSwapping(prob=0.5),
+        Scaling(min_scaler=0.25, max_scaler=1.25),
     ]
 
     optimizer = torch.optim.Adam(
