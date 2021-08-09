@@ -16,7 +16,6 @@ class MUSDB18(torch.utils.data.Dataset):
         sources:        Sequence[str] = ['drums', 'bass', 'vocals', 'other'],
         chunk_duration: int = 5,
         sample_rate:    int = 44100,
-        pitch_shift:    bool = True,
     ) -> None:
 
         super(MUSDB18, self).__init__()
@@ -43,7 +42,6 @@ class MUSDB18(torch.utils.data.Dataset):
         self.chunk_duration = chunk_duration
         self.sample_rate = sample_rate
         self.sources = sources
-        self.pitch_shift = pitch_shift
 
         self._segment_map = [int(track.duration) - self.chunk_duration + 1 for track in self.mus]
 
@@ -74,30 +72,28 @@ class MUSDB18(torch.utils.data.Dataset):
 
         # Data Augumentation
         # Pitch shift
-        if self.pitch_shift:
-            if torch.bernoulli(torch.Tensor([0.2])):
+        if torch.bernoulli(torch.Tensor([0.2])):
+            effects = [
+                # convert cents into semitones by multiplying 100
+                ['pitch', f'{random.randint(-2, 2)*100}'],
+                ['rate', f'{self.sample_rate}'],
+                ['stretch', f'{random.randint(88, 112)*0.01}'],
+                ['rate', f'{self.sample_rate}'],
+            ]
 
-                effects = [
-                    # convert cents into semitones by multiplying 100
-                    ['pitch', f'{random.randint(-2, 2)*100}'],
-                    ['rate', f'{self.sample_rate}'],
-                    ['stretch', f'{random.randint(88, 112)*0.01}'],
-                    ['rate', f'{self.sample_rate}'],
-                ]
-
-                # TODO: replace with torchaudio.functional.pitch_shift
-                mixture, _ = torchaudio.sox_effects.apply_effects_tensor(
-                    tensor=mixture,
+            # TODO: replace with torchaudio.functional.pitch_shift
+            mixture, _ = torchaudio.sox_effects.apply_effects_tensor(
+                tensor=mixture,
+                sample_rate=self.sample_rate,
+                effects=effects,
+            )
+            for i, source in enumerate(sources):
+                source, _ = torchaudio.sox_effects.apply_effects_tensor(
+                    tensor=source,
                     sample_rate=self.sample_rate,
                     effects=effects,
                 )
-                for i, source in enumerate(sources):
-                    source, _ = torchaudio.sox_effects.apply_effects_tensor(
-                        tensor=source,
-                        sample_rate=self.sample_rate,
-                        effects=effects,
-                    )
-                    sources[i] = source
+                sources[i] = source
 
         sources = torch.stack(sources)
 

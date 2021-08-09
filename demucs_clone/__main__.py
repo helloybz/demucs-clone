@@ -41,7 +41,6 @@ def train(args):
         sources=hparams['sources'],
         sample_rate=hparams['sample_rate'],
         **hparams['dataset']['train'],
-        **hparams['dataset']['augmentation'],
     )
     valid_dataset = MUSDB18(
         data_root=data_root,
