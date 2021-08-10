@@ -101,3 +101,17 @@ class MUSDB18(torch.utils.data.Dataset):
 
     def __len__(self):
         return sum(self._segment_map)
+
+
+def collate_shortest(batch_list):
+    mixtures, sources = zip(*batch_list)
+
+    shortest_length = min([item.shape[-1] for item in mixtures+sources])
+
+    mixtures = [mixture[..., :shortest_length] for mixture in mixtures]
+    sources = [source[..., :shortest_length] for source in sources]
+
+    mixtures = torch.stack(mixtures)
+    sources = torch.stack(sources)
+
+    return mixtures, sources

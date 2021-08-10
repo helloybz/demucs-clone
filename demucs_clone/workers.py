@@ -5,6 +5,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
+from .datasets import collate_shortest
+
 
 class Worker:
     def __init__(
@@ -31,6 +33,7 @@ class Worker:
             num_workers=self.num_workers,
             pin_memory=True,
             drop_last=False,
+            collate_fn=collate_shortest,
         )
 
 
