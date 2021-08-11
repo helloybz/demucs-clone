@@ -63,8 +63,6 @@ class MUSDB18(torch.utils.data.Dataset):
         track.chunk_duration = self.chunk_duration - 1
         track.chunk_start = offset + random.uniform(0, 1)
 
-        mixture = torch.from_numpy(track.audio.T).float()
-
         sources = []
         for source in self.sources:
             target_source_audio = torch.from_numpy(track.sources[source].audio.T).float()
@@ -82,11 +80,6 @@ class MUSDB18(torch.utils.data.Dataset):
             ]
 
             # TODO: replace with torchaudio.functional.pitch_shift
-            mixture, _ = torchaudio.sox_effects.apply_effects_tensor(
-                tensor=mixture,
-                sample_rate=self.sample_rate,
-                effects=effects,
-            )
             for i, source in enumerate(sources):
                 source, _ = torchaudio.sox_effects.apply_effects_tensor(
                     tensor=source,
@@ -97,21 +90,18 @@ class MUSDB18(torch.utils.data.Dataset):
 
         sources = torch.stack(sources)
 
-        return mixture, sources
+        return sources
 
     def __len__(self):
         return sum(self._segment_map)
 
 
-def collate_shortest(batch_list):
-    mixtures, sources = zip(*batch_list)
+def collate_shortest(batch_sources):
 
-    shortest_length = min([item.shape[-1] for item in mixtures+sources])
+    shortest_length = min([item.shape[-1] for item in batch_sources])
 
-    mixtures = [mixture[..., :shortest_length] for mixture in mixtures]
-    sources = [source[..., :shortest_length] for source in sources]
+    sources = [source[..., :shortest_length] for source in batch_sources]
 
-    mixtures = torch.stack(mixtures)
     sources = torch.stack(sources)
 
-    return mixtures, sources
+    return sources

@@ -63,11 +63,11 @@ class Trainer(Worker):
         self.model.train()
         dataloader = self._init_dataloader()
 
-        for x, y in dataloader:
-            x = x.to(self.device, non_blocking=True)
+        for y in dataloader:
             y = y.to(self.device, non_blocking=True)
 
-            x, y = self.augmentations([x, y])
+            y = self.augmentations(y)
+            x = y.sum(1)
 
             self.optimizer.zero_grad()
             y_hat = self.model(x)
