@@ -1,0 +1,18 @@
+sample_rate: 44100
+sources: ["drums", "bass", "vocals", "other"]
+
+dataset:
+  train:
+    chunk_duration: 11
+  valid:
+    chunk_duration: 11
+optimizer:
+  lr: 0.0001
+
+criterion:
+  method: "L1LossWithTrimming"
+  kwargs:
+
+batch_size: 64
+num_workers: 8
+validation_period: 1
