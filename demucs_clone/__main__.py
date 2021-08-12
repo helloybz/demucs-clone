@@ -97,8 +97,6 @@ def train(args):
             loss_train_epoch += loss_train_batch
             batch_size += 1
 
-            break
-
         tb.add_scalar(tag='train', scalar_value=loss_train_epoch/batch_size, global_step=epoch)
         print(f'train_epoch {loss_train_epoch/batch_size}')
 

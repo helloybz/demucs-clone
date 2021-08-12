@@ -5,7 +5,7 @@ dataset:
   train:
     chunk_duration: 11
   valid:
-    chunk_duration: 11
+    chunk_duration: 300
 optimizer:
   lr: 0.0001
 
