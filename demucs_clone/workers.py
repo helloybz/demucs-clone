@@ -103,17 +103,20 @@ class Validator(Worker):
         self.loss_best = Inf
 
     @torch.no_grad()
-    def validate(self) -> Iterator[float]:
+    def validate(self, num_examples=2) -> Iterator[float]:
         self.model.eval()
         dataloader = self._init_dataloader()
 
-        for y in dataloader:
+        for idx, y in enumerate(dataloader):
             y = y.to(self.device, non_blocking=True)
             x = y.sum(1)
             y_hat = self.model(x)
             cost = self.criterion(input=y, target=y_hat)
 
-            yield cost.item()
+            if idx < num_examples:
+                yield cost.item(), (x, y)
+            else:
+                yield cost.item(), []
 
     def is_best(self, current_loss: float):
         if self.loss_best > current_loss:
