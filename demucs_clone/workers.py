@@ -114,7 +114,7 @@ class Validator(Worker):
             cost = self.criterion(input=y, target=y_hat)
 
             if idx < num_examples:
-                yield cost.item(), (x, y)
+                yield cost.item(), (y_hat.sum(1), y_hat)
             else:
                 yield cost.item(), []
 

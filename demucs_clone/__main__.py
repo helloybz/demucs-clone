@@ -97,6 +97,8 @@ def train(args):
             loss_train_epoch += loss_train_batch
             batch_size += 1
 
+            break
+
         tb.add_scalar(tag='train', scalar_value=loss_train_epoch/batch_size, global_step=epoch)
         print(f'train_epoch {loss_train_epoch/batch_size}')
 
@@ -104,15 +106,15 @@ def train(args):
             loss_valid_epoch = 0
             batch_size = 0
             num_examples = 2
-            for loss_valid_batch, example in validator.validate(num_examples=num_examples):
+            for batch_idx, (loss_valid_batch, example) in enumerate(validator.validate(num_examples=num_examples)):
                 print(f'valid_batch {loss_valid_batch}', end='\r')
                 loss_valid_epoch += loss_valid_batch
                 batch_size += 1
                 if len(example) > 0:
-                    for example_idx in range(num_examples):
-                        tb.add_audio(tag='mixture', snd_tensor=example[example_idx][0], global_step=epoch, sample_rate=hparams['sample_rate'])
-                        for soure_name, source in zip(valid_dataset.sources, example[example_idx][1]):
-                            tb.add_audio(tag=f'{soure_name}', snd_tensor=source, global_step=epoch, sample_rate=hparams['sample_rate'])
+                    mixture, sources = example
+                    tb.add_audio(tag=f'mixture/{batch_idx}', snd_tensor=mixture.cpu().squeeze(0).mean(0, keepdim=True), global_step=epoch, sample_rate=hparams['sample_rate'])
+                    for soure_name, source in zip(valid_dataset.sources, sources.cpu().squeeze(0)):
+                        tb.add_audio(tag=f'{soure_name}/{batch_idx}', snd_tensor=source.mean(0, keepdim=True), global_step=epoch, sample_rate=hparams['sample_rate'])
 
             loss_valid_average = loss_valid_epoch/batch_size
             tb.add_scalar(tag='valid', scalar_value=loss_valid_average, global_step=epoch)
