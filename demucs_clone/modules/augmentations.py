@@ -75,9 +75,9 @@ class SourceShuffling(nn.Module):
             dim=1
         )
         # reshpe index as the shape of the signals.
-        index = index.reshape(
-            *index.size(), *[1]*(signals.dim()-index.dim())
-        ).expand(signals.size())
-        signals = signals.gather(dim=0, index=index)
+        index = index.reshape(*index.size(), *[1]*(signals.dim()-index.dim()))
+
+        signals = signals.gather(dim=0, index=index.expand(signals.size()))
+        del index
 
         return signals
