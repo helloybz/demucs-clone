@@ -44,7 +44,7 @@ class Scaling(nn.Module):
         signals: torch.Tensor,
     ) -> torch.Tensor:
 
-        scaler = self.uniform_dist.sample([1])
+        scaler = self.uniform_dist.sample([1]).to(signals.device)
         for i, signal in enumerate(signals):
             signals[i] = signal*scaler
 
