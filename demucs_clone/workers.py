@@ -28,11 +28,11 @@ class Worker:
     def _init_dataloader(self):
         return DataLoader(
             dataset=self.dataset,
-            batch_size=self.batch_size,
-            shuffle=True,
+            batch_size=self.batch_size if self.dataset.split == 'train' else 1,
+            shuffle=self.dataset.split == 'train',
             num_workers=self.num_workers,
             pin_memory=True,
-            drop_last=False,
+            drop_last=self.dataset.split != 'train',
             collate_fn=collate_shortest,
         )
 
@@ -107,10 +107,9 @@ class Validator(Worker):
         self.model.eval()
         dataloader = self._init_dataloader()
 
-        for x, y in dataloader:
-            x = x.to(self.device, non_blocking=True)
+        for y in dataloader:
             y = y.to(self.device, non_blocking=True)
-
+            x = y.sum(1)
             y_hat = self.model(x)
             cost = self.criterion(input=y, target=y_hat)
 
