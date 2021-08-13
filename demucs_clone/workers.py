@@ -77,12 +77,12 @@ class Trainer(Worker):
             self.sampler.set_epoch(epoch)
 
         for y in dataloader:
+            self.optimizer.zero_grad()
             y = y.to(self.device, non_blocking=True)
 
             y = self.augmentations(y)
             x = y.sum(1)
 
-            self.optimizer.zero_grad()
             y_hat = self.model(x)
             cost = self.criterion(input=y, target=y_hat)
             cost.backward()
@@ -119,9 +119,12 @@ class Validator(Worker):
         self.loss_best = Inf
 
     @torch.no_grad()
-    def validate(self, num_examples=2) -> Iterator[float]:
+    def validate(self, epoch, num_examples=2) -> Iterator[float]:
         self.model.eval()
         dataloader = self._init_dataloader()
+
+        if self.world_size > 1:
+            self.sampler.set_epoch(epoch)
 
         for idx, y in enumerate(dataloader):
             y = y.to(self.device, non_blocking=True)

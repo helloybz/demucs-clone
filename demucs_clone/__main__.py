@@ -123,7 +123,7 @@ def train(args):
             loss_valid_epoch = 0
             batch_size = 0
             num_examples = 2
-            for batch_idx, (loss_valid_batch, example) in enumerate(validator.validate(num_examples=num_examples)):
+            for batch_idx, (loss_valid_batch, example) in enumerate(validator.validate(epoch=epoch, num_examples=num_examples)):
                 print(f'valid_batch {loss_valid_batch}', end='\r')
                 loss_valid_epoch += loss_valid_batch
                 batch_size += 1
