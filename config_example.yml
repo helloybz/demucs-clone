@@ -7,12 +7,12 @@ dataset:
   valid:
     chunk_duration: 300
 optimizer:
-  lr: 0.0001
+  lr: 0.0003
 
 criterion:
   method: "L1LossWithTrimming"
   kwargs:
 
 batch_size: 64
-num_workers: 8
+num_workers: 32
 validation_period: 1
