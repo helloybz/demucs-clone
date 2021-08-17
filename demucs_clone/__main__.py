@@ -2,6 +2,7 @@ import argparse
 import random
 from pathlib import Path
 
+from diffq import DiffQuantizer
 from torch.utils import tensorboard
 import torch
 from torch import distributed
@@ -61,14 +62,6 @@ def train(args):
 
     model = Demucs(sample_rate=hparams['sample_rate'], sources=hparams['sources'])
     model.to(device)
-    if args.world_size > 1:
-        dmodel = DistributedDataParallel(
-            module=model,
-            device_ids=[torch.cuda.current_device()],
-            output_device=torch.cuda.current_device(),
-        )
-    else:
-        dmodel = model
 
     augmentations = [
         ChannelSwapping(prob=0.5),
@@ -84,12 +77,26 @@ def train(args):
     criterion = getattr(loss, hparams['criterion']['method'])(
         **hparams['criterion']['kwargs'] or {})
 
+    quantizer = DiffQuantizer(model=model)
+    quantizer.setup_optimizer(optimizer=optimizer)
+
+    if args.world_size > 1:
+        dmodel = DistributedDataParallel(
+            module=model,
+            device_ids=[torch.cuda.current_device()],
+            output_device=torch.cuda.current_device(),
+        )
+    else:
+        dmodel = model
+
     trainer = Trainer(
         model=dmodel,
         dataset=train_dataset,
         augmentations=augmentations,
         criterion=criterion,
         optimizer=optimizer,
+        quantizer=quantizer,
+        quantizer_penalty=hparams['quantizer']['penalty'],
         batch_size=hparams['batch_size'],
         num_workers=hparams['num_workers'],
         device=device,

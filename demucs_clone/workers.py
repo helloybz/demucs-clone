@@ -54,6 +54,8 @@ class Trainer(Worker):
         augmentations:  Sequence[nn.Module],
         criterion,
         optimizer,
+        quantizer,
+        quantizer_penalty,
         batch_size,
         num_workers,
         device,
@@ -63,6 +65,8 @@ class Trainer(Worker):
         super(Trainer, self).__init__(model, dataset, criterion, batch_size, num_workers, device, world_size)
 
         self.optimizer = optimizer
+        self.quantizer = quantizer
+        self.quantizer_penalty = quantizer_penalty
         self.augmentations = nn.Sequential(*augmentations)
         self.augmentations.to(self.device)
 
@@ -84,7 +88,7 @@ class Trainer(Worker):
             x = y.sum(1)
 
             y_hat = self.model(x)
-            cost = self.criterion(input=y, target=y_hat)
+            cost = self.criterion(input=y, target=y_hat) + self.quantizer_penalty * self.quantizer.mode_size()
             cost.backward()
             self.optimizer.step()
 
