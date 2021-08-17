@@ -2,8 +2,11 @@ import argparse
 import random
 from pathlib import Path
 
+from diffq import DiffQuantizer
 from torch.utils import tensorboard
 import torch
+from torch import distributed
+from torch.nn.parallel.distributed import DistributedDataParallel
 import numpy
 import yaml
 
@@ -33,7 +36,14 @@ def train(args):
         log_dir=tb_logdir,
     )
 
-    device = torch.device('cuda') if args.gpu else torch.device('cpu')
+    device = torch.device(f'cuda:{args.rank}')
+    torch.cuda.set_device(device=device)
+    distributed.init_process_group(
+        backend='nccl',
+        init_method=f'tcp://{args.master_url}',
+        world_size=args.world_size,
+        rank=args.rank,
+    )
 
     train_dataset = MUSDB18(
         data_root=data_root,
@@ -67,24 +77,40 @@ def train(args):
     criterion = getattr(loss, hparams['criterion']['method'])(
         **hparams['criterion']['kwargs'] or {})
 
+    quantizer = DiffQuantizer(model=model)
+    quantizer.setup_optimizer(optimizer=optimizer)
+
+    if args.world_size > 1:
+        dmodel = DistributedDataParallel(
+            module=model,
+            device_ids=[torch.cuda.current_device()],
+            output_device=torch.cuda.current_device(),
+        )
+    else:
+        dmodel = model
+
     trainer = Trainer(
-        model=model,
+        model=dmodel,
         dataset=train_dataset,
         augmentations=augmentations,
         criterion=criterion,
         optimizer=optimizer,
+        quantizer=quantizer,
+        quantizer_penalty=hparams['quantizer']['penalty'],
         batch_size=hparams['batch_size'],
         num_workers=hparams['num_workers'],
         device=device,
+        world_size=args.world_size,
     )
     validator = Validator(
-        model=model,
+        model=dmodel,
         dataset=valid_dataset,
         criterion=criterion,
         batch_size=hparams['batch_size'],
         num_workers=hparams['num_workers'],
         validation_period=hparams['validation_period'],
         device=device,
+        world_size=args.world_size,
     )
 
     epoch_start = 1
@@ -92,7 +118,7 @@ def train(args):
     for epoch in range(epoch_start, epoch_end):
         loss_train_epoch = 0
         batch_size = 0
-        for loss_train_batch in trainer.train():
+        for loss_train_batch in trainer.train(epoch=epoch):
             print(f'train_batch {loss_train_batch}', end='\r')
             loss_train_epoch += loss_train_batch
             batch_size += 1
@@ -105,9 +131,9 @@ def train(args):
             batch_size = 0
             metrics = {'sdr': 0, 'isr': 0, 'sir': 0, 'sar': 0}
             num_examples = 2
-
+            
             for batch_idx, (loss_valid_batch, metrics_batch, example) in enumerate(validator.validate(num_examples=num_examples)):
-
+              
                 print(f'valid_batch {loss_valid_batch}', end='\r')
                 batch_size += 1
 
@@ -156,7 +182,9 @@ def main():
     parser.add_argument("--config_file", type=str)
     parser.add_argument("--epochs", type=int)
     parser.add_argument("--checkpoint_period", type=int)
-    parser.add_argument("--gpu", action='store_true')
+    parser.add_argument("--rank", type=int, default=-1)
+    parser.add_argument("--world_size", type=int, default=1)
+    parser.add_argument("--master_url", type=str)
 
     args = parser.parse_args()
     train(args)

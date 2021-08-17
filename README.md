@@ -20,7 +20,6 @@
 - [x] Data augmentation: Randomly swapping the channels. (Left, Right)
 - [x] Data augmentation: Randomly scaling by a factor between 0.25 and 1.25.
 - [x] Data augmentation: Tempo shift
-- [ ] Quantization: What is it?? Read the [paper](https://arxiv.org/abs/2104.09987)
-- [ ] DistributedDataParallel
-- [ ] Evaluation: MOS
+- [x] Quantization: Add regularization term as a proxy for quantization effect
+- [x] DistributedDataParallel
 - [x] Evaluation: SDR
