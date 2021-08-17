@@ -2,7 +2,7 @@
 [[Original paper]](https://arxiv.org/pdf/1911.13254.pdf) [[Github]](https://github.com/facebookresearch/demucs)
 - My own implementation of Demucs in PyTorch.
 - Without referencing the original source code.
-
+  (But, referenced for how they have implemented DistributedDataParallel which I had never been used.)
 
 ## Dataset
 ### MUSDB18 [[Link]](https://sigsep.github.io/datasets/musdb.html)
