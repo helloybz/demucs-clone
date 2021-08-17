@@ -36,7 +36,7 @@ def main():
             kwargs['stdin'] = sp.DEVNULL
             kwargs['stdout'] = sp.DEVNULL
             # We keep stderr to see tracebacks from children.
-        tasks.append(sp.Popen(["python", "-m", "demucs_clone"] + args + ["--rank", str(gpu)], **kwargs))
+        tasks.append(sp.Popen(["python3", "-m", "demucs_clone"] + args + ["--rank", str(gpu)], **kwargs))
         tasks[-1].rank = gpu
 
     failed = False
