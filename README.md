@@ -21,6 +21,5 @@
 - [x] Data augmentation: Randomly scaling by a factor between 0.25 and 1.25.
 - [x] Data augmentation: Tempo shift
 - [x] Quantization: Add regularization term as a proxy for quantization effect
-- [ ] DistributedDataParallel
-- [ ] Evaluation: MOS
+- [x] DistributedDataParallel
 - [ ] Evaluation: SDR
