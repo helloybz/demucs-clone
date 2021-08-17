@@ -1,5 +1,6 @@
 from typing import Dict, Iterator, Iterable, Sequence
 
+from museval.metrics import bss_eval
 from numpy import Inf
 import torch
 import torch.nn as nn
@@ -112,11 +113,16 @@ class Validator(Worker):
             x = y.sum(1)
             y_hat = self.model(x)
             cost = self.criterion(input=y, target=y_hat)
+            result = bss_eval(
+                reference_sources=y.squeeze(0).transpose(-1, -2),
+                estimated_sources=y_hat.squeeze(0).transpose(-1, -2),
+            )
+            metrics = {key: value.mean() for key, value in zip(('sdr', 'isr', 'sir', 'sar'), result[0])}
 
             if idx < num_examples:
-                yield cost.item(), (y_hat.sum(1), y_hat)
+                yield cost.item(), metrics, (y_hat.sum(1), y_hat)
             else:
-                yield cost.item(), []
+                yield cost.item(), metrics, []
 
     def is_best(self, current_loss: float):
         if self.loss_best > current_loss:

@@ -23,4 +23,4 @@
 - [ ] Quantization: What is it?? Read the [paper](https://arxiv.org/abs/2104.09987)
 - [ ] DistributedDataParallel
 - [ ] Evaluation: MOS
-- [ ] Evaluation: SDR
+- [x] Evaluation: SDR

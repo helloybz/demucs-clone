@@ -103,19 +103,34 @@ def train(args):
         if epoch % validator.validation_period == 0:
             loss_valid_epoch = 0
             batch_size = 0
+            metrics = {'sdr': 0, 'isr': 0, 'sir': 0, 'sar': 0}
             num_examples = 2
-            for batch_idx, (loss_valid_batch, example) in enumerate(validator.validate(num_examples=num_examples)):
+
+            for batch_idx, (loss_valid_batch, metrics_batch, example) in enumerate(validator.validate(num_examples=num_examples)):
+
                 print(f'valid_batch {loss_valid_batch}', end='\r')
-                loss_valid_epoch += loss_valid_batch
                 batch_size += 1
+
                 if len(example) > 0:
                     mixture, sources = example
                     tb.add_audio(tag=f'mixture/{batch_idx}', snd_tensor=mixture.cpu().squeeze(0).mean(0, keepdim=True), global_step=epoch, sample_rate=hparams['sample_rate'])
                     for soure_name, source in zip(valid_dataset.sources, sources.cpu().squeeze(0)):
                         tb.add_audio(tag=f'{soure_name}/{batch_idx}', snd_tensor=source.mean(0, keepdim=True), global_step=epoch, sample_rate=hparams['sample_rate'])
 
+                loss_valid_epoch += loss_valid_batch
+                for metric_key in metrics_batch.keys():
+                    metrics[metric_key] += metrics_batch[metric_key]
+
             loss_valid_average = loss_valid_epoch/batch_size
+            metrics_average = {key: value/batch_size for key, value in metrics.keys()}
+
             tb.add_scalar(tag='valid', scalar_value=loss_valid_average, global_step=epoch)
+            tb.add_scalars(
+                main_tag='valid',
+                tag_scalar_dict=metrics_average,
+                global_step=epoch
+            )
+
             print(f'valid_epoch {loss_valid_average}')
 
             if validator.is_best(loss_valid_average):
