@@ -22,4 +22,4 @@
 - [x] Data augmentation: Tempo shift
 - [x] Quantization: Add regularization term as a proxy for quantization effect
 - [x] DistributedDataParallel
-- [ ] Evaluation: SDR
+- [x] Evaluation: SDR

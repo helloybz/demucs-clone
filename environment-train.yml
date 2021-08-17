@@ -10,4 +10,5 @@ dependencies:
       - torch==1.9.0
       - torchaudio==0.9.0
       - tensorboard==2.5.0
+      - museval==0.4.0
       - diffq==0.1.1
