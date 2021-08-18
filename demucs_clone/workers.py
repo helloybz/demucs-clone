@@ -33,6 +33,8 @@ class Worker:
             self.sampler = DistributedSampler(
                 dataset=dataset,
             )
+        else:
+            self.sampler = None
 
     def _init_dataloader(self):
         return DataLoader(
@@ -52,7 +54,7 @@ class Trainer(Worker):
         self,
         model: nn.Module,
         dataset,
-        augmentations:  Sequence[nn.Module],
+        augmentations:  nn.Module,
         criterion,
         optimizer,
         quantizer,

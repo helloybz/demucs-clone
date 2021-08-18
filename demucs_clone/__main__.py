@@ -68,6 +68,8 @@ def train(args):
         Scaling(min_scaler=0.25, max_scaler=1.25),
         SourceShuffling(),
     ]
+    augmentations = torch.nn.Sequential(*augmentations)
+    augmentations.to(device)
 
     optimizer = torch.optim.Adam(
         params=model.parameters(),
@@ -79,6 +81,10 @@ def train(args):
 
     quantizer = DiffQuantizer(model=model)
     quantizer.setup_optimizer(optimizer=optimizer)
+
+    print(f'GPU {device}')
+    print(f'model size:\t{sum([p.numel() * p.element_size() for p in model.parameters()])/1024/1024:.4f} MiB')
+    print(f'GPU usage:\t{torch.cuda.memory_stats(device)["allocated_bytes.all.current"]/1024/1024:.4f} MiB')
 
     if args.world_size > 1:
         dmodel = DistributedDataParallel(
@@ -131,9 +137,9 @@ def train(args):
             batch_size = 0
             metrics = {'sdr': 0, 'isr': 0, 'sir': 0, 'sar': 0}
             num_examples = 2
-            
+
             for batch_idx, (loss_valid_batch, metrics_batch, example) in enumerate(validator.validate(num_examples=num_examples)):
-              
+
                 print(f'valid_batch {loss_valid_batch}', end='\r')
                 batch_size += 1
 
