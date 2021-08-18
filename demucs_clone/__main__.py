@@ -79,21 +79,14 @@ def train(args):
     criterion = getattr(loss, hparams['criterion']['method'])(
         **hparams['criterion']['kwargs'] or {})
 
-    quantizer = DiffQuantizer(model=model)
+    quantizer = DiffQuantizer(model=model, group_size=8)
     quantizer.setup_optimizer(optimizer=optimizer)
 
-    print(f'GPU {device}')
-    print(f'model size:\t{sum([p.numel() * p.element_size() for p in model.parameters()])/1024/1024:.4f} MiB')
-    print(f'GPU usage:\t{torch.cuda.memory_stats(device)["allocated_bytes.all.current"]/1024/1024:.4f} MiB')
-
-    if args.world_size > 1:
-        dmodel = DistributedDataParallel(
-            module=model,
-            device_ids=[torch.cuda.current_device()],
-            output_device=torch.cuda.current_device(),
-        )
-    else:
-        dmodel = model
+    dmodel = DistributedDataParallel(
+        module=model,
+        device_ids=[torch.cuda.current_device()],
+        output_device=torch.cuda.current_device(),
+    )
 
     trainer = Trainer(
         model=dmodel,
@@ -104,7 +97,7 @@ def train(args):
         quantizer=quantizer,
         quantizer_penalty=hparams['quantizer']['penalty'],
         batch_size=hparams['batch_size'],
-        num_workers=hparams['num_workers'],
+        num_workers=args.num_workers,
         device=device,
         world_size=args.world_size,
     )
@@ -113,7 +106,7 @@ def train(args):
         dataset=valid_dataset,
         criterion=criterion,
         batch_size=hparams['batch_size'],
-        num_workers=hparams['num_workers'],
+        num_workers=args.num_workers,
         validation_period=hparams['validation_period'],
         device=device,
         world_size=args.world_size,
@@ -124,6 +117,7 @@ def train(args):
     for epoch in range(epoch_start, epoch_end):
         loss_train_epoch = 0
         batch_size = 0
+
         for loss_train_batch in trainer.train(epoch=epoch):
             print(f'train_batch {loss_train_batch}', end='\r')
             loss_train_epoch += loss_train_batch
@@ -131,7 +125,6 @@ def train(args):
 
         tb.add_scalar(tag='train', scalar_value=loss_train_epoch/batch_size, global_step=epoch)
         print(f'train_epoch {loss_train_epoch/batch_size}')
-
         if epoch % validator.validation_period == 0:
             loss_valid_epoch = 0
             batch_size = 0
@@ -180,20 +173,117 @@ def train(args):
         tb.flush()
 
 
+def profile(args):
+    config_file = Path(args.config_file)
+    assert config_file.exists()
+
+    hparams = yaml.load(
+        stream=open(config_file),
+        Loader=yaml.FullLoader,
+    )
+    data_root = Path(__file__).parent.parent.parent.joinpath("datasets").joinpath('musdb18')
+    assert data_root.exists()
+
+    tb_logdir = Path(__file__).parent.parent.joinpath(f'{config_file.stem}').joinpath('logdir')
+
+    device = torch.device(f'cuda:{args.rank}')
+    torch.cuda.set_device(device=device)
+    distributed.init_process_group(
+        backend='nccl',
+        init_method=f'tcp://{args.master_url}',
+        world_size=args.world_size,
+        rank=args.rank,
+    )
+
+    train_dataset = MUSDB18(
+        data_root=data_root,
+        split='train',
+        sources=hparams['sources'],
+        sample_rate=hparams['sample_rate'],
+        **hparams['dataset']['train'],
+    )
+
+    model = Demucs(sample_rate=hparams['sample_rate'], sources=hparams['sources'])
+    model.to(device)
+
+    augmentations = [
+        ChannelSwapping(prob=0.5),
+        Scaling(min_scaler=0.25, max_scaler=1.25),
+        SourceShuffling(),
+    ]
+    augmentations = torch.nn.Sequential(*augmentations)
+    augmentations.to(device)
+
+    optimizer = torch.optim.Adam(
+        params=model.parameters(),
+        **hparams['optimizer'],
+    )
+
+    criterion = getattr(loss, hparams['criterion']['method'])(
+        **hparams['criterion']['kwargs'] or {})
+
+    quantizer = DiffQuantizer(model=model, group_size=8)
+    quantizer.setup_optimizer(optimizer=optimizer)
+
+    dmodel = DistributedDataParallel(
+        module=model,
+        device_ids=[torch.cuda.current_device()],
+        output_device=torch.cuda.current_device(),
+    )
+
+    trainer = Trainer(
+        model=dmodel,
+        dataset=train_dataset,
+        augmentations=augmentations,
+        criterion=criterion,
+        optimizer=optimizer,
+        quantizer=quantizer,
+        quantizer_penalty=hparams['quantizer']['penalty'],
+        batch_size=hparams['batch_size'],
+        num_workers=args.num_workers,
+        device=device,
+        world_size=args.world_size,
+    )
+    with torch.profiler.profile(
+        schedule=torch.profiler.schedule(wait=1, warmup=1, active=2, repeat=2),
+        activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA],
+        on_trace_ready=torch.profiler.tensorboard_trace_handler(tb_logdir),
+        record_shapes=True,
+        profile_memory=True,
+    ) as profiler:
+        for iter_idx, loss_train_batch in enumerate(trainer.train(epoch=0), 0):
+            if iter_idx >= (1+1+2)*2:
+                break
+            print(f'train_batch {loss_train_batch}', end='\r')
+            profiler.step()
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="demucs_clone"
     )
+    sub_parsers = parser.add_subparsers()
 
-    parser.add_argument("--config_file", type=str)
-    parser.add_argument("--epochs", type=int)
-    parser.add_argument("--checkpoint_period", type=int)
-    parser.add_argument("--rank", type=int, default=-1)
-    parser.add_argument("--world_size", type=int, default=1)
-    parser.add_argument("--master_url", type=str)
+    train_parser = sub_parsers.add_parser("train")
+    train_parser.add_argument("--config_file", type=str)
+    train_parser.add_argument("--epochs", type=int)
+    train_parser.add_argument("--checkpoint_period", type=int)
+    train_parser.add_argument("--num_workers", type=int)
+    train_parser.add_argument("--rank", type=int, default=-1)
+    train_parser.add_argument("--world_size", type=int, default=1)
+    train_parser.add_argument("--master_url", type=str)
+    train_parser.set_defaults(func=train)
+
+    profile_parser = sub_parsers.add_parser("profile")
+    profile_parser.add_argument("--config_file", type=str)
+    profile_parser.add_argument("--num_workers", type=int)
+    profile_parser.add_argument("--rank", type=int, default=-1)
+    profile_parser.add_argument("--world_size", type=int, default=1)
+    profile_parser.add_argument("--master_url", type=str)
+    profile_parser.set_defaults(func=profile)
 
     args = parser.parse_args()
-    train(args)
+    args.func(args)
 
 
 if __name__ == "__main__":
