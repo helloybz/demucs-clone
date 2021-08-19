@@ -249,7 +249,6 @@ def profile(args):
         activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA],
         on_trace_ready=torch.profiler.tensorboard_trace_handler(tb_logdir),
         record_shapes=True,
-        profile_memory=True,
     ) as profiler:
         for iter_idx, loss_train_batch in enumerate(trainer.train(epoch=0), 0):
             if iter_idx >= (1+1+2)*2:
