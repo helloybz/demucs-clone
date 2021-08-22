@@ -79,21 +79,18 @@ def train(args):
     criterion = getattr(loss, hparams['criterion']['method'])(
         **hparams['criterion']['kwargs'] or {})
 
-    quantizer = DiffQuantizer(model=model)
+    quantizer = DiffQuantizer(model=model, group_size=8)
     quantizer.setup_optimizer(optimizer=optimizer)
 
     print(f'GPU {device}')
     print(f'model size:\t{sum([p.numel() * p.element_size() for p in model.parameters()])/1024/1024:.4f} MiB')
     print(f'GPU usage:\t{torch.cuda.memory_stats(device)["allocated_bytes.all.current"]/1024/1024:.4f} MiB')
 
-    if args.world_size > 1:
-        dmodel = DistributedDataParallel(
-            module=model,
-            device_ids=[torch.cuda.current_device()],
-            output_device=torch.cuda.current_device(),
-        )
-    else:
-        dmodel = model
+    dmodel = DistributedDataParallel(
+        module=model,
+        device_ids=[torch.cuda.current_device()],
+        output_device=torch.cuda.current_device(),
+    )
 
     trainer = Trainer(
         model=dmodel,
@@ -104,7 +101,7 @@ def train(args):
         quantizer=quantizer,
         quantizer_penalty=hparams['quantizer']['penalty'],
         batch_size=hparams['batch_size'],
-        num_workers=hparams['num_workers'],
+        num_workers=args.num_workers,
         device=device,
         world_size=args.world_size,
     )
@@ -113,7 +110,7 @@ def train(args):
         dataset=valid_dataset,
         criterion=criterion,
         batch_size=hparams['batch_size'],
-        num_workers=hparams['num_workers'],
+        num_workers=args.num_workers,
         validation_period=hparams['validation_period'],
         device=device,
         world_size=args.world_size,

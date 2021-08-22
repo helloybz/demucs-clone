@@ -1,4 +1,4 @@
-from typing import Dict, Iterator, Iterable, Sequence
+from typing import Dict, Iterator, Iterable
 
 from museval.metrics import bss_eval
 from numpy import Inf
@@ -29,23 +29,20 @@ class Worker:
         self.world_size = world_size
         self.batch_size = batch_size // world_size
 
-        if world_size > 1:
-            self.sampler = DistributedSampler(
-                dataset=dataset,
-            )
-        else:
-            self.sampler = None
+        self.sampler = DistributedSampler(
+            dataset=dataset,
+        )
 
     def _init_dataloader(self):
         return DataLoader(
             dataset=self.dataset,
             batch_size=self.batch_size if self.dataset.split == 'train' else 1,
-            shuffle=self.dataset.split == 'train' and (self.sampler is None),
+            shuffle=self.dataset.split == 'train',
             num_workers=self.num_workers,
             pin_memory=True,
             drop_last=self.dataset.split != 'train',
             collate_fn=collate_shortest,
-            sampler=self.sampler if self.world_size > 1 else None,
+            sampler=self.sampler
         )
 
 
@@ -70,8 +67,6 @@ class Trainer(Worker):
         self.optimizer = optimizer
         self.quantizer = quantizer
         self.quantizer_penalty = quantizer_penalty
-        self.augmentations = nn.Sequential(*augmentations)
-        self.augmentations.to(self.device)
 
     def train(self, epoch) -> None:
         '''
@@ -80,8 +75,7 @@ class Trainer(Worker):
         self.model.train()
         dataloader = self._init_dataloader()
 
-        if self.world_size > 1:
-            self.sampler.set_epoch(epoch)
+        self.sampler.set_epoch(epoch)
 
         for y in dataloader:
             self.optimizer.zero_grad()

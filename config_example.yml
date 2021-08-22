@@ -15,5 +15,4 @@ criterion:
   kwargs:
 
 batch_size: 64
-num_workers: 32
 validation_period: 1
