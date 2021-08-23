@@ -7,6 +7,10 @@ import torch
 
 
 class ChannelSwapping(nn.Module):
+    """
+        Apply 'Channel Swapping' to each source in a given minibatch of audio signals.
+    """
+
     def __init__(
             self,
             prob: float = 0.5,
@@ -19,15 +23,11 @@ class ChannelSwapping(nn.Module):
             signals: torch.Tensor,
     ) -> torch.Tensor:
         '''
-            signasls: [torch.Tensor(*, B, C=2, T)]
+            signals: torch.Tensor  (B, S, C, T)
         '''
-        flag = torch.bernoulli(torch.Tensor([self.prob]))
-        if flag:
-            for i, signal in enumerate(signals):
-                *_, C, T = signal.shape
-                assert C == 2, f"The number of the channel should be 2, but given is {C}"
-                signals[i] = signal.flip(-2)  # Flip over C-dim.
-        return signals
+        random_channel_idx = torch.bernoulli(torch.full(signals.shape[:-2], self.prob)).long()
+        random_channel_idx = torch.stack([random_channel_idx, 1-random_channel_idx], dim=-1)
+        return signals.scatter(dim=-2, index=random_channel_idx.unsqueeze(-1).expand(signals.size()), src=signals)
 
 
 class SignShifting(nn.Module):
