@@ -169,12 +169,6 @@ def train(args):
                 context['hparams'] = hparams
                 torch.save(context, CHECKPOINT_ROOT.joinpath('best'))
 
-        if epoch % args.checkpoint_period == 0:
-            context = trainer.get_context()
-            context['epoch'] = epoch
-            context['hparams'] = hparams
-            torch.save(context, CHECKPOINT_ROOT.joinpath(f'{epoch}'))
-
         tb.flush()
 
 
@@ -185,7 +179,7 @@ def main():
 
     parser.add_argument("--config_file", type=str)
     parser.add_argument("--epochs", type=int)
-    parser.add_argument("--checkpoint_period", type=int)
+    parser.add_argument("--num_workers", type=int)
     parser.add_argument("--rank", type=int, default=-1)
     parser.add_argument("--world_size", type=int, default=1)
     parser.add_argument("--master_url", type=str)

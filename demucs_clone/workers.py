@@ -31,13 +31,13 @@ class Worker:
 
         self.sampler = DistributedSampler(
             dataset=dataset,
+            shuffle=self.dataset.split == 'train'
         )
 
     def _init_dataloader(self):
         return DataLoader(
             dataset=self.dataset,
             batch_size=self.batch_size if self.dataset.split == 'train' else 1,
-            shuffle=self.dataset.split == 'train',
             num_workers=self.num_workers,
             pin_memory=True,
             drop_last=self.dataset.split != 'train',
@@ -67,6 +67,7 @@ class Trainer(Worker):
         self.optimizer = optimizer
         self.quantizer = quantizer
         self.quantizer_penalty = quantizer_penalty
+        self.augmentations = augmentations
 
     def train(self, epoch) -> None:
         '''
