@@ -86,7 +86,7 @@ class Trainer(Worker):
             x = y.sum(1)
 
             y_hat = self.model(x)
-            cost = self.criterion(input=y, target=y_hat) + self.quantizer_penalty * self.quantizer.mode_size()
+            cost = self.criterion(input=y, target=y_hat) + self.quantizer_penalty * self.quantizer.model_size()
             cost.backward()
             self.optimizer.step()
 
