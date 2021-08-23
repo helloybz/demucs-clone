@@ -47,7 +47,7 @@ class SignShifting(nn.Module):
         signals: torch.Tensor,
     ) -> torch.Tensor:
         B, S, C, T = signals.size()
-        random_signs = torch.rand([B, S], device=signals.device).ge(0.5).float().mul(2).sub(1).reshape(B, S, 1, 1).expand(B, S, C, T)
+        random_signs = torch.rand([B, S], device=signals.device).ge(self.prob).int().mul(2).sub(1).reshape(B, S, 1, 1).expand(B, S, C, T)
         return signals * random_signs
 
 
