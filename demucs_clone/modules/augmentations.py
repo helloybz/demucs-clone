@@ -30,6 +30,27 @@ class ChannelSwapping(nn.Module):
         return signals
 
 
+class SignShifting(nn.Module):
+    """
+        Apply 'Sign Shifting' to each source in a given minibatch of audio signals.
+    """
+
+    def __init__(
+        self,
+        prob: float = 0.5,
+    ) -> None:
+        super(SignShifting, self).__init__()
+        self.prob = prob
+
+    def forward(
+        self,
+        signals: torch.Tensor,
+    ) -> torch.Tensor:
+        B, S, C, T = signals.size()
+        random_signs = torch.rand([B, S], device=signals.device).ge(0.5).float().mul(2).sub(1).reshape(B, S, 1, 1).expand(B, S, C, T)
+        return signals * random_signs
+
+
 class Scaling(nn.Module):
     def __init__(
             self,
