@@ -24,7 +24,7 @@ class Worker:
         self.model = model
         self.dataset = dataset
         self.criterion = criterion
-        self.num_workers = num_workers
+        self.num_workers = num_workers // world_size
         self.device = device
         self.world_size = world_size
         self.batch_size = batch_size // world_size
