@@ -52,6 +52,10 @@ class SignShifting(nn.Module):
 
 
 class Scaling(nn.Module):
+    r"""Scale all the source signals in the given minibatch independantly.
+    The scale factors are independantly sampled from the uniform distribution of the given range.
+    """
+
     def __init__(
             self,
             min_scaler,
@@ -65,11 +69,11 @@ class Scaling(nn.Module):
         signals: torch.Tensor,
     ) -> torch.Tensor:
 
-        scaler = self.uniform_dist.sample([1]).to(signals.device)
-        for i, signal in enumerate(signals):
-            signals[i] = signal*scaler
+        B, S, *_ = signals.size()
+        scalers = self.uniform_dist.sample(torch.Size([B, S])).to(signals.device)
+        scalers = scalers.reshape(B, S, 1, 1)
 
-        return signals
+        return scalers*signals
 
 
 class SourceShuffling(nn.Module):
