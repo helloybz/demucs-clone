@@ -7,6 +7,7 @@ from torch.utils import tensorboard
 import torch
 from torch import distributed
 from torch.nn.parallel.distributed import DistributedDataParallel
+import multiprocessing as mp
 import numpy
 import yaml
 
@@ -196,4 +197,5 @@ if __name__ == "__main__":
     torch.backends.cudnn.benchmark = False
     numpy.random.seed(0)
     random.seed(0)
+    mp.set_start_method('forkserver')
     main()
