@@ -88,14 +88,14 @@ def train(args):
     print(f'model size:\t{sum([p.numel() * p.element_size() for p in model.parameters()])/1024/1024:.4f} MiB')
     print(f'GPU usage:\t{torch.cuda.memory_stats(device)["allocated_bytes.all.current"]/1024/1024:.4f} MiB')
 
-    dmodel = DistributedDataParallel(
+    model = DistributedDataParallel(
         module=model,
         device_ids=[torch.cuda.current_device()],
         output_device=torch.cuda.current_device(),
     )
 
     trainer = Trainer(
-        model=dmodel,
+        model=model,
         dataset=train_dataset,
         augmentations=augmentations,
         criterion=criterion,
@@ -108,7 +108,7 @@ def train(args):
         world_size=args.world_size,
     )
     validator = Validator(
-        model=dmodel,
+        model=model,
         dataset=valid_dataset,
         criterion=criterion,
         batch_size=hparams['batch_size'],
