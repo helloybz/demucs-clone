@@ -34,8 +34,7 @@ class Worker:
             shuffle=self.dataset.split == 'train'
         )
 
-    def _init_dataloader(self):
-        return DataLoader(
+        self.dataloader = DataLoader(
             dataset=self.dataset,
             batch_size=self.batch_size if self.dataset.split == 'train' else 1,
             num_workers=self.num_workers,
@@ -74,11 +73,10 @@ class Trainer(Worker):
         Train the model with dataset for 1 epoch.
         '''
         self.model.train()
-        dataloader = self._init_dataloader()
 
         self.sampler.set_epoch(epoch)
 
-        for y in dataloader:
+        for y in self.dataloader:
             self.optimizer.zero_grad()
             y = y.to(self.device, non_blocking=True)
 
@@ -123,12 +121,11 @@ class Validator(Worker):
     @torch.no_grad()
     def validate(self, epoch, num_examples=2) -> Iterator[float]:
         self.model.eval()
-        dataloader = self._init_dataloader()
 
         if self.world_size > 1:
             self.sampler.set_epoch(epoch)
 
-        for idx, y in enumerate(dataloader):
+        for idx, y in enumerate(self.dataloader):
             y = y.to(self.device, non_blocking=True)
             x = y.sum(1)
             y_hat = self.model(x)
