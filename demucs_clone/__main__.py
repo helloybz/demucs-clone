@@ -33,18 +33,23 @@ def train(args):
     CHECKPOINT_ROOT = Path(__file__).parent.parent.joinpath(f'{config_file.stem}').joinpath('checkpoints')
     tb_logdir = Path(__file__).parent.parent.joinpath(f'{config_file.stem}').joinpath('logdir')
 
-    tb = tensorboard.SummaryWriter(
-        log_dir=tb_logdir,
-    )
+    if args.rank == 0:
+        tb = tensorboard.SummaryWriter(
+            log_dir=tb_logdir,
+        )
 
-    device = torch.device(f'cuda:{args.rank}')
-    torch.cuda.set_device(device=device)
-    distributed.init_process_group(
-        backend='nccl',
-        init_method=f'tcp://{args.master_url}',
-        world_size=args.world_size,
-        rank=args.rank,
-    )
+    if torch.cuda.is_available():
+        device = torch.device(f'cuda:{args.rank}')
+        torch.cuda.set_device(device=device)
+        if args.world_size > 1:
+            distributed.init_process_group(
+                backend='nccl',
+                init_method=f'tcp://{args.master_url}',
+                world_size=args.world_size,
+                rank=args.rank,
+            )
+    else:
+        device = torch.device('cpu')
 
     train_dataset = MUSDB18(
         data_root=data_root,
@@ -62,8 +67,16 @@ def train(args):
     )
 
     model = Demucs(sample_rate=hparams['sample_rate'], sources=hparams['sources'])
-    model.to(device)
 
+    if torch.cuda.is_available():
+        model.to(device)
+
+    optimizer = torch.optim.Adam(
+        params=model.parameters(),
+        **hparams['optimizer'],
+    )
+    quantizer = DiffQuantizer(model=model, group_size=8)
+    quantizer.setup_optimizer(optimizer=optimizer)
     augmentations = [
         ChannelSwapping(prob=0.5),
         SignShifting(prob=0.5),
@@ -73,29 +86,21 @@ def train(args):
     augmentations = torch.nn.Sequential(*augmentations)
     augmentations.to(device)
 
-    optimizer = torch.optim.Adam(
-        params=model.parameters(),
-        **hparams['optimizer'],
-    )
+    # Wrapping with DDP should be done after init the quantizer.
+    if args.world_size > 1:
+        dmodel = DistributedDataParallel(
+            module=model,
+            device_ids=[torch.cuda.current_device()],
+            output_device=torch.cuda.current_device(),
+        )
+    else:
+        dmodel = model
 
     criterion = getattr(loss, hparams['criterion']['method'])(
         **hparams['criterion']['kwargs'] or {})
 
-    quantizer = DiffQuantizer(model=model, group_size=8)
-    quantizer.setup_optimizer(optimizer=optimizer)
-
-    print(f'GPU {device}')
-    print(f'model size:\t{sum([p.numel() * p.element_size() for p in model.parameters()])/1024/1024:.4f} MiB')
-    print(f'GPU usage:\t{torch.cuda.memory_stats(device)["allocated_bytes.all.current"]/1024/1024:.4f} MiB')
-
-    model = DistributedDataParallel(
-        module=model,
-        device_ids=[torch.cuda.current_device()],
-        output_device=torch.cuda.current_device(),
-    )
-
     trainer = Trainer(
-        model=model,
+        model=dmodel,
         dataset=train_dataset,
         augmentations=augmentations,
         criterion=criterion,
@@ -181,9 +186,9 @@ def main():
     parser.add_argument("--config_file", type=str)
     parser.add_argument("--epochs", type=int)
     parser.add_argument("--num_workers", type=int)
-    parser.add_argument("--rank", type=int, default=-1)
+    parser.add_argument("--rank", type=int, default=0)
     parser.add_argument("--world_size", type=int, default=1)
-    parser.add_argument("--master_url", type=str)
+    parser.add_argument("--master_url", type=str, default='')
 
     args = parser.parse_args()
     train(args)
