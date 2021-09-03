@@ -24,15 +24,19 @@ class Worker:
         self.model = model
         self.dataset = dataset
         self.criterion = criterion
-        self.num_workers = num_workers // world_size
         self.device = device
-        self.world_size = world_size
-        self.batch_size = batch_size // world_size
 
-        self.sampler = DistributedSampler(
-            dataset=dataset,
-            shuffle=self.dataset.split == 'train'
-        )
+        self.num_workers = num_workers
+        self.batch_size = batch_size
+
+        self.world_size = world_size
+        if world_size > 1:
+            self.num_workers = num_workers // world_size
+            self.batch_size = batch_size // world_size
+            self.sampler = DistributedSampler(
+                dataset=dataset,
+                shuffle=self.dataset.split == 'train'
+            )
 
         self.dataloader = DataLoader(
             dataset=self.dataset,
@@ -41,7 +45,7 @@ class Worker:
             pin_memory=True,
             drop_last=self.dataset.split != 'train',
             collate_fn=collate_shortest,
-            sampler=self.sampler
+            sampler=self.sampler if world_size > 1 else None,
         )
 
 
@@ -74,7 +78,8 @@ class Trainer(Worker):
         '''
         self.model.train()
 
-        self.sampler.set_epoch(epoch)
+        if self.world_size > 1:
+            self.sampler.set_epoch(epoch)
 
         for y in self.dataloader:
             self.optimizer.zero_grad()
