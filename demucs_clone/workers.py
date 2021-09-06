@@ -1,6 +1,5 @@
 from typing import Dict, Iterator, Iterable
 
-from museval.metrics import bss_eval
 from numpy import Inf
 import torch
 import torch.nn as nn
@@ -95,7 +94,7 @@ class Trainer(Worker):
 
             del x, y, y_hat
 
-            yield cost.item()
+            yield cost
 
     def get_context(self) -> Dict:
         context = dict()
@@ -114,37 +113,25 @@ class Validator(Worker):
         criterion:          nn.Module,
         batch_size:         int,
         num_workers:        int,
-        validation_period:  int,
         device,
         world_size,
     ) -> None:
         super(Validator, self).__init__(model, dataset, criterion, batch_size, num_workers, device, world_size)
 
-        self.validation_period = validation_period
         self.loss_best = Inf
 
     @torch.no_grad()
-    def validate(self, epoch, num_examples=2) -> Iterator[float]:
+    def validate(self, epoch) -> Iterator[float]:
         self.model.eval()
 
         if self.world_size > 1:
             self.sampler.set_epoch(epoch)
 
-        for idx, y in enumerate(self.dataloader):
+        for y in enumerate(self.dataloader):
             y = y.to(self.device, non_blocking=True)
             x = y.sum(1)
             y_hat = self.model(x)
-            cost = self.criterion(input=y, target=y_hat)
-            result = bss_eval(
-                reference_sources=y.squeeze(0).transpose(-1, -2),
-                estimated_sources=y_hat.squeeze(0).transpose(-1, -2),
-            )
-            metrics = {key: value.mean() for key, value in zip(('sdr', 'isr', 'sir', 'sar'), result[0])}
-
-            if idx < num_examples:
-                yield cost.item(), metrics, (y_hat.sum(1), y_hat)
-            else:
-                yield cost.item(), metrics, []
+            yield self.criterion(input=y, target=y_hat)
 
     def is_best(self, current_loss: float):
         if self.loss_best > current_loss:

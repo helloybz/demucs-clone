@@ -1,0 +1,34 @@
+mixture: mixture.wav
+sample-url: https://zenodo.org/api/files/1ff52183-071a-4a59-923f-7a31c4762d43/MUSDB18-7-STEMS.zip
+sample_rate: 44100.0
+sources:
+  bass: bass.wav
+  drums: drums.wav
+  other: other.wav
+  vocals: vocals.wav
+stem_ids:
+  bass: 2
+  drums: 1
+  mixture: 0
+  other: 3
+  vocals: 4
+targets:
+  accompaniment:
+    bass: 1
+    drums: 1
+    other: 1
+  bass:
+    bass: 1
+  drums:
+    drums: 1
+  linear_mixture:
+    bass: 1
+    drums: 1
+    other: 1
+    vocals: 1
+  other:
+    other: 1
+  vocals:
+    vocals: 1
+validation_tracks:
+- track_valid
