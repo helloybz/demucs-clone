@@ -7,6 +7,7 @@ from torch.utils import tensorboard
 import torch
 from torch import distributed
 from torch.nn.parallel.distributed import DistributedDataParallel
+from tqdm import tqdm
 import multiprocessing as mp
 import numpy
 import yaml
@@ -21,17 +22,20 @@ from . import loss
 
 def train(args):
     config_file = Path(args.config_file)
-    assert config_file.exists()
+    assert config_file.exists(), f"The given config_file is not exists. {args.config_file}"
 
     hparams = yaml.load(
         stream=open(config_file),
         Loader=yaml.FullLoader,
     )
-    data_root = Path(__file__).parent.parent.parent.joinpath("datasets").joinpath('musdb18')
+    data_root = Path(args.data_root)
     assert data_root.exists()
 
-    CHECKPOINT_ROOT = Path(__file__).parent.parent.joinpath(f'{config_file.stem}').joinpath('checkpoints')
-    tb_logdir = Path(__file__).parent.parent.joinpath(f'{config_file.stem}').joinpath('logdir')
+    if args.rank == 0:
+        CHECKPOINT_ROOT = Path(args.checkpoint_root)
+        tb_logdir = Path(CHECKPOINT_ROOT).parent.joinpath('logdir' if not args.is_testing else 'logdir_test')
+
+        CHECKPOINT_ROOT.mkdir(exist_ok=True)
 
     if args.rank == 0:
         tb = tensorboard.SummaryWriter(
@@ -118,7 +122,6 @@ def train(args):
         criterion=criterion,
         batch_size=hparams['batch_size'],
         num_workers=args.num_workers,
-        validation_period=hparams['validation_period'],
         device=device,
         world_size=args.world_size,
     )
@@ -126,56 +129,42 @@ def train(args):
     epoch_start = 1
     epoch_end = args.epochs + 1
     for epoch in range(epoch_start, epoch_end):
+
+        # Training
         loss_train_epoch = 0
-        batch_size = 0
-        for loss_train_batch in trainer.train(epoch=epoch):
-            print(f'train_batch {loss_train_batch}', end='\r')
-            loss_train_epoch += loss_train_batch
-            batch_size += 1
+        num_iters = len(train_dataset) // hparams['batch_size']
 
-        tb.add_scalar(tag='train', scalar_value=loss_train_epoch/batch_size, global_step=epoch)
-        print(f'train_epoch {loss_train_epoch/batch_size}')
+        if not args.is_testing:
+            for loss_train_batch in tqdm(trainer.train(epoch=epoch), desc=f'Train | Epoch {epoch}', total=num_iters):
+                loss_train_epoch += loss_train_batch
 
-        if epoch % validator.validation_period == 0:
-            loss_valid_epoch = 0
-            batch_size = 0
-            metrics = {'sdr': 0, 'isr': 0, 'sir': 0, 'sar': 0}
-            num_examples = 2
+        if args.rank == 0:
+            tb.add_scalar(tag='train', scalar_value=loss_train_epoch/num_iters, global_step=epoch)
+            print(f'EPOCH:{epoch}\tAvg Train Loss:{loss_train_epoch/num_iters:.4f}')
 
-            for batch_idx, (loss_valid_batch, metrics_batch, example) in enumerate(validator.validate(num_examples=num_examples)):
+        # Validation
+        loss_valid_epoch = 0
+        num_iters = len(valid_dataset) // validator.dataloader.batch_size
 
-                print(f'valid_batch {loss_valid_batch}', end='\r')
-                batch_size += 1
-
-                if len(example) > 0:
-                    mixture, sources = example
-                    tb.add_audio(tag=f'mixture/{batch_idx}', snd_tensor=mixture.cpu().squeeze(0).mean(0, keepdim=True), global_step=epoch, sample_rate=hparams['sample_rate'])
-                    for soure_name, source in zip(valid_dataset.sources, sources.cpu().squeeze(0)):
-                        tb.add_audio(tag=f'{soure_name}/{batch_idx}', snd_tensor=source.mean(0, keepdim=True), global_step=epoch, sample_rate=hparams['sample_rate'])
-
+        if not args.is_testing:
+            for loss_valid_batch in tqdm(validator.validate(epoch), desc=f'Valid | Epoch {epoch}', total=len(valid_dataset)):
                 loss_valid_epoch += loss_valid_batch
-                for metric_key in metrics_batch.keys():
-                    metrics[metric_key] += metrics_batch[metric_key]
 
-            loss_valid_average = loss_valid_epoch/batch_size
-            metrics_average = {key: value/batch_size for key, value in metrics.keys()}
+        loss_valid_average = loss_valid_epoch / len(valid_dataset)
 
+        if args.rank == 0:
             tb.add_scalar(tag='valid', scalar_value=loss_valid_average, global_step=epoch)
-            tb.add_scalars(
-                main_tag='valid',
-                tag_scalar_dict=metrics_average,
-                global_step=epoch
-            )
+            print(f'EPOCH:{epoch}\tAvg Valid Loss:{loss_valid_average:.4f}')
 
-            print(f'valid_epoch {loss_valid_average}')
+            context = trainer.get_context()
+            context['epoch'] = epoch
+            context['hparams'] = hparams
+            torch.save(context, CHECKPOINT_ROOT.joinpath(f'epoch_{epoch:04d}.pt'))
 
             if validator.is_best(loss_valid_average):
-                context = trainer.get_context()
-                context['epoch'] = epoch
-                context['hparams'] = hparams
-                torch.save(context, CHECKPOINT_ROOT.joinpath('best'))
+                torch.save(context, CHECKPOINT_ROOT.joinpath('best.pt'))
 
-        tb.flush()
+    tb.flush()
 
 
 def main():
@@ -183,12 +172,15 @@ def main():
         prog="demucs_clone"
     )
 
-    parser.add_argument("--config_file", type=str)
-    parser.add_argument("--epochs", type=int)
-    parser.add_argument("--num_workers", type=int)
+    parser.add_argument("--data_root", type=Path, required=True)
+    parser.add_argument("--config_file", type=Path, required=True)
+    parser.add_argument("--checkpoint_root", type=Path, required=True)
+    parser.add_argument("--epochs", type=int, required=True)
+    parser.add_argument("--num_workers", type=int, default=0)
     parser.add_argument("--rank", type=int, default=0)
     parser.add_argument("--world_size", type=int, default=1)
     parser.add_argument("--master_url", type=str, default='')
+    parser.add_argument("--is_testing", type=bool, action='store_true', default=False)
 
     args = parser.parse_args()
     train(args)

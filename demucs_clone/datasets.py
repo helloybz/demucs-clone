@@ -16,6 +16,7 @@ class MUSDB18(torch.utils.data.Dataset):
         sources:        Sequence[str] = ['drums', 'bass', 'vocals', 'other'],
         chunk_duration: int = 5,
         sample_rate:    int = 44100,
+        setup_file:     str = None,
     ) -> None:
 
         super(MUSDB18, self).__init__()
@@ -28,6 +29,7 @@ class MUSDB18(torch.utils.data.Dataset):
                 download=download,
                 subsets='train',
                 split=split,
+                setup_file=setup_file,
             )
         elif split in ['test']:
             self.mus = musdb.DB(
