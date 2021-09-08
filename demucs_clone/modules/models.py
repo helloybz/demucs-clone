@@ -1,6 +1,6 @@
 from typing import Sequence
 import torch.nn as nn
-import torchaudio.functional as F_audio
+import torchaudio
 
 from ..utils import init_conv_weight_with_rescaling
 from ..utils import trim_edge
@@ -93,15 +93,19 @@ class Demucs(nn.Module):
         # Remove the activation function from the last decoder block.
         self.decoder_conv_blocks[-1].block = self.decoder_conv_blocks[-1].block[:-1]
 
+        self.upsampling = torchaudio.transforms.Resample(
+            orig_freq=sample_rate,
+            new_freq=2*sample_rate,
+        )
+        self.downsampling = torchaudio.transforms.Resample(
+            orig_freq=2*sample_rate,
+            new_freq=sample_rate
+        )
         self.apply(init_conv_weight_with_rescaling)
 
     def forward(self, x):
         B, C, T = x.shape
-        x = F_audio.resample(
-            waveform=x,
-            orig_freq=self.sample_rate,
-            new_freq=self.sample_rate*2,
-        )
+        x = self.upsampling(waveform=x)
 
         encoder_outputs = []
         for encoder_conv_block in self.encoder_conv_blocks:
@@ -119,11 +123,7 @@ class Demucs(nn.Module):
             x = encoder_output.add(x)
             x = decoder_conv_block(x)
 
-        x = F_audio.resample(
-            waveform=x,
-            orig_freq=self.sample_rate*2,
-            new_freq=self.sample_rate,
-        )
+        x = self.downsampling(waveform=x)
         x = x.reshape(B, len(self.sources), C, -1)
         return x
 
