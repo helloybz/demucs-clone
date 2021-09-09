@@ -1,0 +1,19 @@
+sample_rate: 44100
+sources: ["drums", "bass", "vocals", "other"]
+
+dataset:
+  train:
+    chunk_duration: 1
+    setup_file: "./test_setup.yml"
+  valid:
+    chunk_duration: 1
+    setup_file: "./test_setup.yml"
+optimizer:
+  lr: 0.00003
+quantizer:
+  penalty: 0.0003
+criterion:
+  method: "L1LossWithTrimming"
+  kwargs:
+
+batch_size: 1
