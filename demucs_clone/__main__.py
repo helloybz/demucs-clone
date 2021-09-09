@@ -180,7 +180,7 @@ def main():
     parser.add_argument("--rank", type=int, default=0)
     parser.add_argument("--world_size", type=int, default=1)
     parser.add_argument("--master_url", type=str, default='')
-    parser.add_argument("--is_testing", type=bool, action='store_true', default=False)
+    parser.add_argument("--is_testing", action='store_true', default=False)
 
     args = parser.parse_args()
     train(args)
