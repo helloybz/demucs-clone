@@ -80,12 +80,10 @@ def run_with_gpu(args):
 
 
 def run_with_cpu(args):
-    task = sp.Popen(["python3", "-m", "demucs_clone"] + args, stdout=sp.PIPE, bufsize=1)
+    task = sp.Popen(["python3", "-m", "demucs_clone"] + args, stdout=sys.stdout)
     failed = False
     try:
         while True:
-            if task.stdout:
-                print(task.stdout.readline())
             try:
                 exitcode = task.wait(0.1)
             except sp.TimeoutExpired:

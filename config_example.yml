@@ -1,6 +1,9 @@
 sample_rate: 44100
 sources: ["drums", "bass", "vocals", "other"]
 
+model:
+  num_layers: 6
+  initial_channel: 64
 dataset:
   train:
     chunk_duration: 11

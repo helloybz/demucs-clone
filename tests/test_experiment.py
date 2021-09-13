@@ -4,7 +4,7 @@ import unittest
 
 import torch
 
-import demucs_clone.__main__ as demucs_clone
+import demucs_clone.__main__ as demucs_clone_main
 
 
 class TestCheckpointState(unittest.TestCase):
@@ -23,7 +23,7 @@ class TestCheckpointState(unittest.TestCase):
         args = ['--data_root', './tests/data_root', '--config_file', './tests/config_test.yml', '--checkpoint_root', './checkpoints_test', '--epochs', '1', '--is_testing']
         self.args = parser_for_test.parse_args(args)
 
-        demucs_clone.train(self.args)
+        demucs_clone_main.train(self.args)
 
     def test_make_checkpoint_root_if_given_root_is_not_exists(self):
         self.assertTrue(Path('./checkpoints_test').exists())

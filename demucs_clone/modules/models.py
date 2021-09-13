@@ -58,9 +58,12 @@ class Demucs(nn.Module):
                 for layer_idx in range(num_layers, 0, -1)
             ]
         )
-
         # Remove the activation function from the last decoder block.
-        self.decoder_conv_blocks[-1].block = self.decoder_conv_blocks[-1].block[:-1]
+        setattr(
+            self.decoder_conv_blocks[-1],
+            'block',
+            getattr(self.decoder_conv_blocks[-1], 'block')[:-1]
+        )
 
         self.upsampling = torchaudio.transforms.Resample(
             orig_freq=sample_rate,

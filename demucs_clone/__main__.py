@@ -24,10 +24,11 @@ def train(args):
     config_file = Path(args.config_file)
     assert config_file.exists(), f"The given config_file is not exists. {args.config_file}"
 
-    hparams = yaml.load(
-        stream=open(config_file),
-        Loader=yaml.FullLoader,
-    )
+    with open(config_file) as config_io:
+        hparams = yaml.load(
+            stream=config_io,
+            Loader=yaml.FullLoader,
+        )
     data_root = Path(args.data_root)
     assert data_root.exists()
 

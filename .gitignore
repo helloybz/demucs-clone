@@ -4,6 +4,8 @@
 *ec2*
 config_*.yml
 !config_example.yml
+!config_test.yml
+run_gcp*.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
