@@ -16,77 +16,46 @@ class Demucs(nn.Module):
         self,
         sample_rate:    int = 44100,
         sources:        Sequence[str] = ['drums', 'bass', 'vocals', 'other'],
+        num_layers:     int = 6,
+        initial_channel: int = 64,
     ) -> None:
         super(Demucs, self).__init__()
 
         self.sample_rate = sample_rate
         self.sources = sources
+
+        channels = [2] + [(2**layer_index) * initial_channel for layer_index in range(num_layers)]
+
         self.encoder_conv_blocks = nn.ModuleList(
             [
                 DemucsEncoderBlock(
-                    in_channels=2,
-                    out_channels=64,
-                ),
-                DemucsEncoderBlock(
-                    in_channels=64,
-                    out_channels=128,
-                ),
-                DemucsEncoderBlock(
-                    in_channels=128,
-                    out_channels=256,
-                ),
-                DemucsEncoderBlock(
-                    in_channels=256,
-                    out_channels=512,
-                ),
-                DemucsEncoderBlock(
-                    in_channels=512,
-                    out_channels=1024,
-                ),
-                DemucsEncoderBlock(
-                    in_channels=1024,
-                    out_channels=2048,
-                ),
+                    in_channels=channels[layer_idx],
+                    out_channels=channels[layer_idx+1],
+                )
+                for layer_idx in range(num_layers)
             ]
         )
+
         self.encoder_bilstm = nn.LSTM(
-            input_size=2048,
-            hidden_size=2048,
+            input_size=channels[-1],
+            hidden_size=channels[-1],
             num_layers=2,
             bidirectional=True,
             batch_first=True,
         )
         self.encoder_linear = nn.Linear(
-            in_features=4096,
-            out_features=2048,
+            in_features=2*channels[-1],
+            out_features=channels[-1],
         )
 
+        channels[0] = channels[0] * len(sources)
         self.decoder_conv_blocks = nn.ModuleList(
             [
                 DemucsDecoderBlock(
-                    in_channels=2048,
-                    out_channels=1024,
-                ),
-                DemucsDecoderBlock(
-                    in_channels=1024,
-                    out_channels=512,
-                ),
-                DemucsDecoderBlock(
-                    in_channels=512,
-                    out_channels=256,
-                ),
-                DemucsDecoderBlock(
-                    in_channels=256,
-                    out_channels=128,
-                ),
-                DemucsDecoderBlock(
-                    in_channels=128,
-                    out_channels=64,
-                ),
-                DemucsDecoderBlock(
-                    in_channels=64,
-                    out_channels=2 * len(self.sources),  # 2 channels for each 4 instruments.
-                ),
+                    in_channels=channels[layer_idx],
+                    out_channels=channels[layer_idx-1],
+                )
+                for layer_idx in range(num_layers, 0, -1)
             ]
         )
 

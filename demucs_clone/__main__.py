@@ -70,7 +70,11 @@ def train(args):
         **hparams['dataset']['valid'],
     )
 
-    model = Demucs(sample_rate=hparams['sample_rate'], sources=hparams['sources'])
+    model = Demucs(
+        sample_rate=hparams['sample_rate'],
+        sources=hparams['sources'],
+        **hparams['model'],
+    )
 
     if torch.cuda.is_available():
         model.to(device)
