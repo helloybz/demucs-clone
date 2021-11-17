@@ -1,0 +1,22 @@
+{
+  "files": {
+    "main.css": "/demucs-clone/static/css/main.ff0e889c.chunk.css",
+    "main.js": "/demucs-clone/static/js/main.8e553adb.chunk.js",
+    "main.js.map": "/demucs-clone/static/js/main.8e553adb.chunk.js.map",
+    "runtime-main.js": "/demucs-clone/static/js/runtime-main.a7acea44.js",
+    "runtime-main.js.map": "/demucs-clone/static/js/runtime-main.a7acea44.js.map",
+    "static/js/2.c203cdd5.chunk.js": "/demucs-clone/static/js/2.c203cdd5.chunk.js",
+    "static/js/2.c203cdd5.chunk.js.map": "/demucs-clone/static/js/2.c203cdd5.chunk.js.map",
+    "static/js/3.a948489b.chunk.js": "/demucs-clone/static/js/3.a948489b.chunk.js",
+    "static/js/3.a948489b.chunk.js.map": "/demucs-clone/static/js/3.a948489b.chunk.js.map",
+    "index.html": "/demucs-clone/index.html",
+    "static/css/main.ff0e889c.chunk.css.map": "/demucs-clone/static/css/main.ff0e889c.chunk.css.map",
+    "static/js/2.c203cdd5.chunk.js.LICENSE.txt": "/demucs-clone/static/js/2.c203cdd5.chunk.js.LICENSE.txt"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.a7acea44.js",
+    "static/js/2.c203cdd5.chunk.js",
+    "static/css/main.ff0e889c.chunk.css",
+    "static/js/main.8e553adb.chunk.js"
+  ]
+}
